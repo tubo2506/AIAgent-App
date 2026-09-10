@@ -171,29 +171,48 @@ export const SidebarConfig: React.FC<SidebarConfigProps> = ({ config, onChange }
         </label>
 
         {/* Local Proxy Toggle */}
-        <label className="flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 hover:border-slate-300 dark:hover:border-slate-700 transition cursor-pointer">
-          <input
-            type="checkbox"
-            checked={config.useProxy}
-            onChange={(e) => update({ useProxy: e.target.checked })}
-            className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0"
-          />
-          <div className="text-xs">
-            <div className="flex items-center gap-1.5">
-              <span className="font-semibold text-slate-800 dark:text-slate-200">Dùng Local Vite Proxy</span>
-              {!config.useProxy && (
-                <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold">
-                  Khuyên dùng
+        {(() => {
+          const isLocalhost =
+            typeof window !== 'undefined' &&
+            (window.location.hostname === 'localhost' ||
+              window.location.hostname === '127.0.0.1' ||
+              window.location.hostname === '0.0.0.0');
+
+          return (
+            <label className={`flex items-start gap-2.5 p-2.5 rounded-lg bg-slate-50 dark:bg-slate-950/60 border border-slate-200 dark:border-slate-800/80 transition ${isLocalhost ? 'hover:border-slate-300 dark:hover:border-slate-700 cursor-pointer' : 'opacity-70 cursor-not-allowed'}`}>
+              <input
+                type="checkbox"
+                checked={isLocalhost ? config.useProxy : false}
+                disabled={!isLocalhost}
+                onChange={(e) => isLocalhost && update({ useProxy: e.target.checked })}
+                className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0 disabled:opacity-50"
+              />
+              <div className="text-xs">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">Local Vite Proxy</span>
+                  {isLocalhost ? (
+                    !config.useProxy && (
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400 font-bold">
+                        Khuyên dùng
+                      </span>
+                    )
+                  ) : (
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 font-medium">
+                      Chỉ cho localhost
+                    </span>
+                  )}
+                </div>
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight block mt-0.5">
+                  {isLocalhost
+                    ? config.useProxy
+                      ? 'Đang chuyển tiếp qua máy chủ nội bộ Vite trên máy tính của bạn.'
+                      : 'Đang gọi trực tiếp đến Google API (Tốc độ tối đa, không qua proxy).'
+                    : 'Đang kết nối trực tiếp đến Google API tốc độ cao (Local Proxy chỉ dùng khi chạy local dev trên máy tính).'}
                 </span>
-              )}
-            </div>
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 leading-tight block mt-0.5">
-              {config.useProxy
-                ? 'Đang chuyển tiếp qua máy chủ nội bộ Vite. Nếu gặp độ trễ khi tải file PDF lớn, bạn nên tắt tùy chọn này để stream trực tiếp.'
-                : 'Đang gọi trực tiếp đến Google API (Tốc độ tối đa, không qua trung gian Node proxy).'}
-            </span>
-          </div>
-        </label>
+              </div>
+            </label>
+          );
+        })()}
 
         {/* Auth Mode & Version */}
         <div className="grid grid-cols-2 gap-2">

@@ -105,6 +105,7 @@ export function App() {
         // Tự động chuyển model sang gemini-3.5-flash-lite nếu đang dùng model quota thấp hoặc default cũ
         if (
           !parsed.model ||
+          parsed.model === 'gemini-2.5-flash' ||
           parsed.model === 'gemini-3.6-flash' ||
           parsed.model === 'gemini-3.5-flash' ||
           parsed.model === 'gemini-flash-lite-latest' ||
@@ -112,6 +113,17 @@ export function App() {
         ) {
           parsed.model = 'gemini-3.5-flash-lite';
         }
+
+        // Đảm bảo tắt useProxy nếu đang chạy trên Web đám mây (Firebase Hosting)
+        const isLocalhost =
+          typeof window !== 'undefined' &&
+          (window.location.hostname === 'localhost' ||
+            window.location.hostname === '127.0.0.1' ||
+            window.location.hostname === '0.0.0.0');
+        if (!isLocalhost) {
+          parsed.useProxy = false;
+        }
+
         return { ...DEFAULT_CONFIG, ...parsed };
       }
     } catch {
@@ -290,7 +302,19 @@ export function App() {
 
   const handleSelectPreset = (promptText: string, suggestedConfig?: Partial<ApiConfig>) => {
     if (suggestedConfig) {
-      setConfig((prev) => ({ ...prev, ...suggestedConfig }));
+      const cleanConfig = { ...suggestedConfig };
+      const isLocalhost =
+        typeof window !== 'undefined' &&
+        (window.location.hostname === 'localhost' ||
+          window.location.hostname === '127.0.0.1' ||
+          window.location.hostname === '0.0.0.0');
+      if (!isLocalhost) {
+        cleanConfig.useProxy = false;
+      }
+      if (cleanConfig.model === 'gemini-2.5-flash') {
+        cleanConfig.model = 'gemini-3.5-flash-lite';
+      }
+      setConfig((prev) => ({ ...prev, ...cleanConfig }));
     }
     setPendingPrompt(promptText);
     setActiveTab('chat');

@@ -39,6 +39,7 @@ import {
   ThumbsUp,
   ThumbsDown,
   Cloud,
+  Zap,
 } from './icons';
 import type { ApiConfig, ChatMessage, RequestHistoryItem, UploadedFile, Agent, ChatSession, KnowledgeDocument } from '../types';
 import {
@@ -2276,17 +2277,52 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                       )}
 
                       {isError && (
-                        <div className="flex items-center gap-2 flex-wrap">
+                        <div className="flex items-center gap-2 flex-wrap mt-1">
                           <button
                             onClick={() => {
                               const lastUser = [...messages].reverse().find((msg) => msg.role === 'user');
                               if (lastUser) handleRetry(lastUser.content);
                             }}
-                            className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors font-medium"
+                            className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 hover:bg-rose-100 dark:hover:bg-rose-900/60 border border-rose-200 dark:border-rose-800 cursor-pointer transition-colors font-semibold shadow-2xs"
                           >
-                            <RotateCcw className="w-3 h-3" />
+                            <RotateCcw className="w-3.5 h-3.5" />
                             <span>Thử lại</span>
                           </button>
+
+                          {/* Quick Fix: Chuyển sang Gemini 3.5 Flash-Lite nếu đang dùng model khác */}
+                          {config.model !== 'gemini-3.5-flash-lite' && (
+                            <button
+                              onClick={() => {
+                                onConfigChange?.({ model: 'gemini-3.5-flash-lite', useProxy: false });
+                                const lastUser = [...messages].reverse().find((msg) => msg.role === 'user');
+                                if (lastUser) {
+                                  setTimeout(() => handleRetry(lastUser.content), 100);
+                                }
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 border border-amber-300 dark:border-amber-800 cursor-pointer transition-colors font-medium shadow-2xs"
+                              title="Chuyển ngay sang model Gemini 3.5 Flash-Lite (tương thích cao nhất & hạn ngạch lớn nhất) và gửi lại"
+                            >
+                              <Zap className="w-3.5 h-3.5 text-amber-500" />
+                              <span>Đổi sang Gemini 3.5 Flash-Lite & Thử lại</span>
+                            </button>
+                          )}
+
+                          {/* Quick Fix: Tắt Proxy nếu đang bị kẹt useProxy trên Web */}
+                          {config.useProxy && (
+                            <button
+                              onClick={() => {
+                                onConfigChange?.({ useProxy: false });
+                                const lastUser = [...messages].reverse().find((msg) => msg.role === 'user');
+                                if (lastUser) {
+                                  setTimeout(() => handleRetry(lastUser.content), 100);
+                                }
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-300 dark:border-blue-800 cursor-pointer transition-colors font-medium shadow-2xs"
+                              title="Tắt Local Proxy và gọi trực tiếp Google API"
+                            >
+                              <span>Tắt Local Proxy & Gọi trực tiếp</span>
+                            </button>
+                          )}
 
                           {config.enableSearchGrounding && (
                             <button
@@ -2297,10 +2333,10 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                                   setTimeout(() => handleRetry(lastUser.content), 100);
                                 }
                               }}
-                              className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 cursor-pointer transition-colors font-medium shadow-2xs"
+                              className="flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 cursor-pointer transition-colors font-medium shadow-2xs"
                               title="Tắt tính năng Google Search Grounding để không bị lỗi hạn mức và nhận câu trả lời ngay"
                             >
-                              <Globe className="w-3 h-3" />
+                              <Globe className="w-3.5 h-3.5" />
                               <span>Tắt Tra Cứu Web & Thử Lại Ngay</span>
                             </button>
                           )}

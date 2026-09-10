@@ -464,57 +464,76 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
               <label className="text-xs font-semibold text-slate-700 dark:text-slate-300">
                 Chế độ kết nối:
               </label>
-              <div className="grid grid-cols-2 gap-3">
-                <button
-                  type="button"
-                  onClick={() => update({ useProxy: false })}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                    !config.useProxy
-                      ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-500 ring-2 ring-emerald-500/20'
-                      : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        Gọi Trực Tiếp Google
-                      </span>
-                      {!config.useProxy && <Check className="w-3.5 h-3.5 text-emerald-600" />}
-                    </div>
-                    <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
-                      Khuyên Dùng • Nhanh x3
-                    </span>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
-                      Gọi thẳng tới Google API qua CORS, không nghẽn Proxy Node.js khi upload PDF lớn.
-                    </p>
-                  </div>
-                </button>
+              {(() => {
+                const isLocalhost =
+                  typeof window !== 'undefined' &&
+                  (window.location.hostname === 'localhost' ||
+                    window.location.hostname === '127.0.0.1' ||
+                    window.location.hostname === '0.0.0.0');
 
-                <button
-                  type="button"
-                  onClick={() => update({ useProxy: true })}
-                  className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
-                    config.useProxy
-                      ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-500 ring-2 ring-blue-500/20'
-                      : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-slate-300'
-                  }`}
-                >
-                  <div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                        Local Vite Proxy
-                      </span>
-                      {config.useProxy && <Check className="w-3.5 h-3.5 text-blue-600" />}
-                    </div>
-                    <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 block mt-0.5">
-                      Bypass Mạng Chặn
-                    </span>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
-                      Chuyển tiếp qua máy chủ nội bộ. Hữu ích nếu IP bị Google giới hạn vùng.
-                    </p>
+                return (
+                  <div className="grid grid-cols-2 gap-3">
+                    <button
+                      type="button"
+                      onClick={() => update({ useProxy: false })}
+                      className={`p-3 rounded-xl border text-left transition-all cursor-pointer flex flex-col justify-between ${
+                        !config.useProxy || !isLocalhost
+                          ? 'bg-emerald-50/70 dark:bg-emerald-950/30 border-emerald-500 ring-2 ring-emerald-500/20'
+                          : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            Gọi Trực Tiếp Google
+                          </span>
+                          {(!config.useProxy || !isLocalhost) && (
+                            <Check className="w-3.5 h-3.5 text-emerald-600" />
+                          )}
+                        </div>
+                        <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 block mt-0.5">
+                          Khuyên Dùng • Tốc Độ Cao
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
+                          Gọi thẳng tới Google API qua CORS, kết nối trực tiếp không qua trung gian.
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={!isLocalhost}
+                      onClick={() => isLocalhost && update({ useProxy: true })}
+                      className={`p-3 rounded-xl border text-left transition-all flex flex-col justify-between ${
+                        isLocalhost
+                          ? config.useProxy
+                            ? 'bg-blue-50/70 dark:bg-blue-950/30 border-blue-500 ring-2 ring-blue-500/20 cursor-pointer'
+                            : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 hover:border-slate-300 cursor-pointer'
+                          : 'bg-slate-100/60 dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 opacity-60 cursor-not-allowed'
+                      }`}
+                    >
+                      <div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                            Local Vite Proxy
+                          </span>
+                          {isLocalhost && config.useProxy && (
+                            <Check className="w-3.5 h-3.5 text-blue-600" />
+                          )}
+                        </div>
+                        <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block mt-0.5">
+                          {isLocalhost ? 'Bypass Mạng Local' : 'Chỉ dùng cho Localhost'}
+                        </span>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-tight">
+                          {isLocalhost
+                            ? 'Chuyển tiếp qua máy chủ Vite nội bộ khi phát triển trên máy tính.'
+                            : 'Trên bản Web đám mây, hệ thống tự động kết nối trực tiếp đến Google API.'}
+                        </p>
+                      </div>
+                    </button>
                   </div>
-                </button>
-              </div>
+                );
+              })()}
             </div>
 
             {/* Streaming SSE Toggle */}

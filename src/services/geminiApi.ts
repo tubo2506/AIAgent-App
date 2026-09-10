@@ -3,7 +3,14 @@ import type { ApiConfig, ApiResponseData, GroundingMetadata, GroundingSource } f
 export function buildEndpointUrl(config: ApiConfig, action = 'generateContent'): string {
   let base: string;
 
-  if (config.useProxy) {
+  // Kiểm tra môi trường: chỉ cho phép /api/gemini-proxy khi chạy thực tế trên localhost (Vite dev server)
+  const isLocalhost =
+    typeof window !== 'undefined' &&
+    (window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '0.0.0.0');
+
+  if (config.useProxy && isLocalhost) {
     base = `/api/gemini-proxy/${config.apiVersion}/models/${config.model}:${action}`;
   } else if (config.customBaseUrl && config.customBaseUrl.trim() !== '') {
     const trimmed = config.customBaseUrl.trim().replace(/\/+$/, '');
@@ -194,12 +201,20 @@ export async function sendGeminiRequest(
 
     if (!response.ok) {
       let friendlyError = '';
+      const rawErrorMsg = (typeof data === 'object' ? data?.error?.message : '') || '';
+      const isLocationError =
+        response.status === 400 &&
+        (rawErrorMsg.toLowerCase().includes('location') ||
+          rawErrorMsg.toLowerCase().includes('country') ||
+          data?.error?.status === 'FAILED_PRECONDITION');
+
       if (response.status === 404) {
-        friendlyError = `Model "${config.model}" không tìm thấy trên phiên bản ${config.apiVersion}. Hãy thử đổi sang gemini-flash-lite-latest hoặc gemini-3.6-flash.`;
-      } else if (response.status === 400 && typeof data === 'object' && data?.error?.message?.includes('location')) {
-        friendlyError = 'Vị trí mạng/IP hiện tại không được Google hỗ trợ trực tiếp. Bạn hãy bật VPN hoặc bật chế độ "Local Proxy" trên thanh cấu hình.';
+        friendlyError = `Model "${config.model}" không tìm thấy trên phiên bản ${config.apiVersion}. Hãy thử đổi sang "gemini-3.5-flash-lite" hoặc "gemini-flash-lite-latest".`;
+      } else if (isLocationError) {
+        friendlyError =
+          'Vị trí mạng/IP hiện tại bị Google giới hạn (User location is not supported). 💡 Cách khắc phục ngay:\n1. TẮT VPN (nếu đang bật VPN công ty hoặc VPN nước ngoài) để kết nối trực tiếp từ mạng Việt Nam.\n2. Hoặc phát mạng 4G/5G từ điện thoại di động (giải quyết 100% khi dải IP Wi-Fi bị Google xếp nhầm).\n3. Đảm bảo chọn model "Gemini 3.5 Flash-Lite" trên thanh cấu hình.';
       } else if (response.status === 401 || response.status === 403) {
-        friendlyError = 'API Key không hợp lệ hoặc không có quyền truy cập endpoint này.';
+        friendlyError = 'API Key không hợp lệ hoặc không có quyền truy cập endpoint này. Bạn hãy kiểm tra lại khóa API trong phần Cài đặt.';
       } else if (response.status === 504 || response.status === 502) {
         friendlyError = 'Proxy server quá thời gian chờ (Gateway Timeout). Bạn nên tắt chế độ "Local Proxy" để gọi trực tiếp tới Google nhanh hơn.';
       } else if (response.status === 429) {
@@ -304,12 +319,20 @@ export async function sendGeminiStreamingRequest(
       }
 
       let friendlyError = '';
+      const rawErrorMsg = (typeof data === 'object' ? data?.error?.message : '') || '';
+      const isLocationError =
+        response.status === 400 &&
+        (rawErrorMsg.toLowerCase().includes('location') ||
+          rawErrorMsg.toLowerCase().includes('country') ||
+          data?.error?.status === 'FAILED_PRECONDITION');
+
       if (response.status === 404) {
-        friendlyError = `Model "${config.model}" không tìm thấy trên phiên bản ${config.apiVersion}. Hãy thử đổi sang gemini-flash-lite-latest hoặc gemini-3.6-flash.`;
-      } else if (response.status === 400 && typeof data === 'object' && data?.error?.message?.includes('location')) {
-        friendlyError = 'Vị trí mạng/IP hiện tại không được Google hỗ trợ trực tiếp. Hãy bật chế độ "Local Proxy" trên thanh cấu hình.';
+        friendlyError = `Model "${config.model}" không tìm thấy trên phiên bản ${config.apiVersion}. Hãy thử đổi sang "gemini-3.5-flash-lite" hoặc "gemini-flash-lite-latest".`;
+      } else if (isLocationError) {
+        friendlyError =
+          'Vị trí mạng/IP hiện tại bị Google giới hạn (User location is not supported). 💡 Cách khắc phục ngay:\n1. TẮT VPN (nếu đang bật VPN công ty hoặc VPN nước ngoài) để kết nối trực tiếp từ mạng Việt Nam.\n2. Hoặc phát mạng 4G/5G từ điện thoại di động (giải quyết 100% khi dải IP Wi-Fi bị Google xếp nhầm).\n3. Đảm bảo chọn model "Gemini 3.5 Flash-Lite" trên thanh cấu hình.';
       } else if (response.status === 401 || response.status === 403) {
-        friendlyError = 'API Key không hợp lệ hoặc không có quyền truy cập endpoint này.';
+        friendlyError = 'API Key không hợp lệ hoặc không có quyền truy cập endpoint này. Bạn hãy kiểm tra lại khóa API trong phần Cài đặt.';
       } else if (response.status === 504 || response.status === 502) {
         friendlyError = 'Proxy server quá thời gian chờ (Gateway Timeout). Bạn nên tắt chế độ "Local Proxy" để gọi trực tiếp tới Google nhanh hơn.';
       } else if (response.status === 429) {
