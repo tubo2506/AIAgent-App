@@ -182,8 +182,8 @@ export function App() {
   };
 
   const handleTabClick = (tabKey: typeof activeTab) => {
-    if (tabKey === 'chat') {
-      setActiveTab('chat');
+    if (tabKey === 'chat' || tabKey === 'presets') {
+      setActiveTab(tabKey);
       return;
     }
     if (isProtected && !isUnlocked) {

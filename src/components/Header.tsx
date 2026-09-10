@@ -103,7 +103,7 @@ export const Header: React.FC<HeaderProps> = ({
             {!isUnlocked && isProtected && <Lock className="w-3 h-3 text-slate-400" />}
           </button>
 
-          {/* Tab 3: Mẫu Prompt */}
+          {/* Tab 3: Mẫu Prompt (Đã mở khóa công khai) */}
           <button
             onClick={() => onTabClick('presets')}
             className={`flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer whitespace-nowrap shrink-0 ${
@@ -115,7 +115,6 @@ export const Header: React.FC<HeaderProps> = ({
             <Sparkles className="w-3.5 h-3.5" />
             <span className="hidden sm:inline">Mẫu Prompt</span>
             <span className="sm:hidden">Mẫu</span>
-            {!isUnlocked && isProtected && <Lock className="w-3 h-3 text-slate-400" />}
           </button>
 
           {/* Tab 4: Raw JSON */}
