@@ -45,7 +45,7 @@ export const CATEGORIES = [
 ] as const;
 
 export const PRESETS: PresetItem[] = [
-  // --- 1. PHÁP LUẬT & THUẾ - KẾ TOÁN ---
+  // --- 1. PHÁP LUẬT & THUẾ - KẾ TOÁN (HOÀN TOÀN MỞ, KHÔNG GIỚI HẠN BỞI SỐ HIỆU NGHỊ ĐỊNH CỐ ĐỊNH) ---
   {
     id: 'legal_invoice_timing',
     title: 'Xuất hóa đơn khi khách nợ tiền',
@@ -54,9 +54,9 @@ export const PRESETS: PresetItem[] = [
     icon: FileText,
     color: 'from-blue-600 to-indigo-700',
     badgeColor: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-    description: 'Tư vấn thời điểm lập hóa đơn điện tử khi giao hàng tháng này nhưng tháng sau mới nhận tiền, tránh phạt theo NĐ 125/2020.',
+    description: 'Tư vấn thời điểm lập hóa đơn điện tử khi giao hàng tháng này nhưng tháng sau mới thanh toán, chế tài xử phạt và phương án tối ưu.',
     prompt:
-      'Tình huống thực tế cho chủ doanh nghiệp: Doanh nghiệp của tôi bán lô hàng trị giá 150 triệu đồng đã giao hàng và lập biên bản bàn giao nghiệm thu ngày 25/08, nhưng theo hợp đồng đối tác sẽ thanh toán vào ngày 10/09 (tháng sau). Kế toán muốn chờ tiền về tài khoản mới xuất hóa đơn điện tử. Xin chuyên gia và luật sư tư vấn:\n1. Kế toán làm vậy có vi phạm quy định về thời điểm lập hóa đơn không?\n2. Mức phạt tiền theo Nghị định 125/2020/NĐ-CP là bao nhiêu?\n3. Có giải pháp nào vừa tuân thủ 100% pháp luật, vừa có lợi nhất cho quản lý dòng tiền và công nợ của doanh nghiệp?\nTrích dẫn đầy đủ điều, khoản tại Nghị định 123/2020/NĐ-CP, Thông tư 78/2021/TT-BTC và Nghị định 125/2020/NĐ-CP để đối chiếu.',
+      'Tình huống thực tế cho chủ doanh nghiệp: Doanh nghiệp của tôi bán lô hàng trị giá 150 triệu đồng đã hoàn thành bàn giao nghiệm thu ngày 25/08, nhưng theo hợp đồng đối tác sẽ thanh toán vào ngày 10/09 (tháng sau). Kế toán muốn chờ tiền về tài khoản mới xuất hóa đơn điện tử. Xin chuyên gia và luật sư tư vấn:\n1. Kế toán xử lý như vậy có vi phạm quy định về thời điểm lập hóa đơn theo pháp luật hiện hành không?\n2. Khung mức phạt tiền vi phạm hành chính đối với hành vi xuất hóa đơn sai thời điểm hiện nay là bao nhiêu?\n3. Có giải pháp nào vừa đảm bảo tuân thủ tuyệt đối quy định pháp luật hiện hành, vừa tối ưu hóa quản lý dòng tiền và hạn chế rủi ro nợ xấu cho doanh nghiệp?\nYêu cầu chuyên gia đối chiếu, trích dẫn rõ các văn bản quy phạm pháp luật, số hiệu và điều khoản cụ thể đang có hiệu lực thi hành để doanh nghiệp thực hiện.',
     config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
   },
   {
@@ -67,36 +67,127 @@ export const PRESETS: PresetItem[] = [
     icon: FileText,
     color: 'from-amber-600 to-rose-600',
     badgeColor: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-    description: 'Phân biệt và lựa chọn lập Hóa đơn Điều chỉnh hay Thay thế khi sai đơn giá, quy trình nộp Mẫu 04/SS-HĐĐT.',
+    description: 'Phân biệt và lựa chọn lập Hóa đơn Điều chỉnh hay Thay thế khi sai sót đơn giá, số lượng; quy trình thông báo sai sót đến cơ quan thuế.',
     prompt:
-      'Tình huống: Doanh nghiệp tôi đã xuất hóa đơn điện tử có mã của cơ quan thuế gửi cho khách hàng, sau đó phát hiện bị sai đơn giá và thành tiền (tăng thêm 20 triệu đồng). Xin chuyên gia tư vấn chi tiết:\n1. Trường hợp này nên chọn lập Hóa đơn Điều chỉnh hay Hóa đơn Thay thế thì thuận tiện và an toàn nhất cho cả người bán lẫn người mua?\n2. Có bắt buộc phải lập biên bản thỏa thuận giữa hai bên không?\n3. Thủ tục gửi Mẫu 04/SS-HĐĐT lên cơ quan thuế được quy định như thế nào?\nTrích dẫn rõ Điều, Khoản cụ thể tại Nghị định 123/2020/NĐ-CP và Thông tư 78/2021/TT-BTC.',
+      'Tình huống: Doanh nghiệp tôi đã xuất hóa đơn điện tử có mã của cơ quan thuế gửi cho khách hàng, sau đó phát hiện bị sai đơn giá và thành tiền (tăng thêm 20 triệu đồng). Xin chuyên gia tư vấn chi tiết:\n1. Trường hợp này nên chọn lập Hóa đơn Điều chỉnh hay Hóa đơn Thay thế thì thuận tiện và an toàn nhất cho cả người bán lẫn người mua?\n2. Có bắt buộc phải lập biên bản thỏa thuận giữa hai bên không?\n3. Thủ tục gửi mẫu thông báo hóa đơn điện tử có sai sót lên cơ quan thuế được quy định như thế nào?\nYêu cầu trích dẫn rõ điều, khoản và các văn bản quy phạm pháp luật hiện hành hướng dẫn xử lý trường hợp này.',
+    config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
+  },
+  {
+    id: 'legal_new_regulations_comparison',
+    title: 'Đối chiếu các Điểm mới về Hóa đơn & Thuế',
+    category: 'legal',
+    categoryLabel: 'Quy định mới & Tuân thủ',
+    icon: FileText,
+    color: 'from-teal-600 to-emerald-700',
+    badgeColor: 'bg-teal-50 text-teal-700 dark:bg-teal-950/60 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+    description: 'Rà soát toàn diện các văn bản quy định hiện hành mới nhất xem có sửa đổi quy trình xử lý hóa đơn, chuẩn hóa cổng thuế và sinh trắc học.',
+    prompt:
+      'Xin chuyên gia luật thuế rà soát và đối chiếu toàn diện hệ thống quy định pháp luật hiện hành về hóa đơn, chứng từ điện tử:\n1. Các văn bản quy phạm pháp luật mới ban hành gần đây có sửa đổi, bổ sung hay thay thế quy trình xử lý hóa đơn sai sót (lựa chọn Hóa đơn điều chỉnh / Thay thế) hay không?\n2. Các điểm mới cốt lõi tập trung vào những nội dung số hóa nào (như truyền nhận dữ liệu qua Cổng TTĐT Tổng cục Thuế, chuẩn hóa dữ liệu, xác thực sinh trắc học, giám sát rủi ro tự động)?\n3. Doanh nghiệp cần cập nhật quy trình kế toán nội bộ thế nào để đảm bảo tuân thủ song song giữa quy định nền tảng và các văn bản sửa đổi bổ sung mới nhất?\nTrích dẫn cụ thể tên văn bản, số hiệu, điều khoản quy định để đối chiếu.',
+    config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
+  },
+  {
+    id: 'legal_pos_invoice_mandate',
+    title: 'Hóa đơn khởi tạo từ Máy tính tiền',
+    category: 'legal',
+    categoryLabel: 'Hóa đơn Máy tính tiền',
+    icon: FileText,
+    color: 'from-cyan-600 to-blue-700',
+    badgeColor: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/60 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
+    description: 'Đối tượng, điều kiện và lộ trình bắt buộc áp dụng hóa đơn điện tử từ máy tính tiền kết nối cơ quan thuế cho bán lẻ, ăn uống, dịch vụ.',
+    prompt:
+      'Doanh nghiệp/hộ kinh doanh hoạt động trong lĩnh vực bán lẻ, chuỗi ăn uống, nhà hàng, khách sạn và dịch vụ trực tiếp đến người tiêu dùng:\n1. Những đối tượng nào bắt buộc phải triển khai hóa đơn điện tử khởi tạo từ máy tính tiền có kết nối chuyển dữ liệu với cơ quan thuế theo quy định hiện hành?\n2. Lộ trình thực hiện, điều kiện hạ tầng kỹ thuật và giải pháp tích hợp phần mềm bán hàng POS được quy định ra sao?\n3. Không áp dụng hoặc trì hoãn triển khai máy tính tiền kết nối cơ quan thuế sẽ đối mặt với những chế tài, rủi ro pháp lý và mức xử phạt nào?\nTrích dẫn căn cứ pháp lý hiện hành hướng dẫn vấn đề này.',
+    config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
+  },
+  {
+    id: 'legal_tax_expenses',
+    title: 'Chi phí thanh toán tiền mặt trên 20 triệu',
+    category: 'legal',
+    categoryLabel: 'Thuế & Chi phí hợp lý',
+    icon: FileText,
+    color: 'from-emerald-600 to-teal-700',
+    badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+    description: 'Điều kiện khấu trừ thuế GTGT và tính chi phí được trừ thuế TNDN đối với hóa đơn trên 20 triệu, phương án khắc phục an toàn.',
+    prompt:
+      'Doanh nghiệp mua lô thiết bị văn phòng trị giá 25 triệu đồng có hóa đơn hợp pháp, nhưng nhân viên mua hàng lỡ thanh toán bằng tiền mặt (hoặc chuyển khoản từ tài khoản cá nhân). Xin chuyên gia tư vấn:\n1. Khoản chi này có được tính vào chi phí được trừ khi xác định thu nhập chịu thuế TNDN và có được khấu trừ thuế GTGT đầu vào theo quy định pháp luật hiện hành không?\n2. Doanh nghiệp có thể xử lý khắc phục bằng cách nào để khoản chi này được cơ quan thuế chấp nhận hợp lệ và hợp pháp?\nNêu rõ các điều kiện thanh toán không dùng tiền mặt và căn cứ pháp lý hiện hành tương ứng.',
+    config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
+  },
+  {
+    id: 'legal_biometric_etax',
+    title: 'Xác thực Sinh trắc học & Định danh Thuế',
+    category: 'legal',
+    categoryLabel: 'Bảo mật & Tài khoản Thuế',
+    icon: FileText,
+    color: 'from-indigo-600 to-purple-700',
+    badgeColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+    description: 'Yêu cầu xác thực định danh và sinh trắc học người đại diện pháp luật khi đăng ký, nộp tờ khai và quản lý hóa đơn điện tử.',
+    prompt:
+      'Chủ doanh nghiệp muốn tìm hiểu về các quy định liên quan đến an toàn tài khoản thuế điện tử và chống gian lận hóa đơn:\n1. Pháp luật hiện hành quy định như thế nào về việc xác thực định danh điện tử, sinh trắc học của người đại diện theo pháp luật khi đăng ký hoặc thay đổi thông tin sử dụng hóa đơn điện tử?\n2. Ứng dụng thuế điện tử (eTax Mobile, Cổng thông tin điện tử ngành thuế) yêu cầu các bước xác thực danh tính ra sao?\n3. Nếu người đại diện theo pháp luật không thực hiện xác thực hoặc ủy quyền không đúng quy định thì doanh nghiệp có bị tạm dừng giao dịch hóa đơn điện tử không?\nTrích dẫn rõ căn cứ pháp luật hiện hành.',
+    config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
+  },
+  {
+    id: 'legal_ecommerce_invoicing',
+    title: 'Xuất Hóa đơn Sàn TMĐT & Bán hàng Online',
+    category: 'legal',
+    categoryLabel: 'Thương mại điện tử',
+    icon: FileText,
+    color: 'from-violet-600 to-fuchsia-700',
+    badgeColor: 'bg-violet-50 text-violet-700 dark:bg-violet-950/60 dark:text-violet-300 border-violet-200 dark:border-violet-800',
+    description: 'Thời điểm lập hóa đơn, đối soát dòng tiền và trách nhiệm thuế khi bán hàng qua sàn Shopee, TikTok Shop, Lazada, Livestream.',
+    prompt:
+      'Doanh nghiệp và cá nhân kinh doanh bán lẻ đa kênh (Shopee, TikTok Shop, Lazada, Facebook Livestream):\n1. Thời điểm lập hóa đơn điện tử cho từng đơn hàng thành công được xác định khi nào: lúc đóng gói giao cho đơn vị vận chuyển hay lúc người mua bấm nhận hàng thành công trên sàn?\n2. Trường hợp khách hoàn hàng hoặc từ chối nhận hàng (boom hàng) thì xử lý hóa đơn đã phát hành ra sao?\n3. Cơ chế đối soát dữ liệu doanh thu giữa sàn thương mại điện tử và cơ quan thuế hiện nay hoạt động thế nào, và doanh nghiệp cần lưu trữ hồ sơ gì để giải trình thanh tra thuế?\nTrích dẫn văn bản quy phạm pháp luật hiện hành hướng dẫn.',
+    config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
+  },
+  {
+    id: 'legal_discount_promotions',
+    title: 'Chiết khấu thương mại & Hàng biếu tặng',
+    category: 'legal',
+    categoryLabel: 'Kế toán & Khuyến mại',
+    icon: FileText,
+    color: 'from-amber-600 to-orange-700',
+    badgeColor: 'bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+    description: 'Quy trình lập hóa đơn giảm trừ doanh số, hàng khuyến mại có đăng ký Sở Công Thương, quà tặng tri ân khách hàng và người lao động.',
+    prompt:
+      'Doanh nghiệp có chương trình chiết khấu thương mại theo sản lượng cuối quý cho các đại lý phân phối, đồng thời tặng quà tri ân khách hàng thân thiết:\n1. Cách lập hóa đơn điện tử cho khoản chiết khấu thương mại: Lập hóa đơn điều chỉnh hay giảm trừ trực tiếp trên hóa đơn mua hàng lần cuối kỳ?\n2. Hàng khuyến mại (đã đăng ký Sở Công Thương) và quà biếu tặng khách hàng có bắt buộc phải xuất hóa đơn điện tử không? Giá tính thuế GTGT và thuế suất ghi nhận thế nào?\n3. Điều kiện để các chi phí quà tặng, biếu tặng được tính vào chi phí hợp lý được trừ khi quyết toán thuế TNDN?\nTrích dẫn đầy đủ điều khoản quy định hiện hành.',
+    config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
+  },
+  {
+    id: 'legal_abandoned_supplier_invoice',
+    title: 'Xử lý Hóa đơn NCC Bỏ địa chỉ kinh doanh',
+    category: 'legal',
+    categoryLabel: 'Rủi ro Thuế & Thanh tra',
+    icon: FileText,
+    color: 'from-red-600 to-rose-700',
+    badgeColor: 'bg-red-50 text-red-700 dark:bg-red-950/60 dark:text-red-300 border-red-200 dark:border-red-800',
+    description: 'Biện pháp giải trình, đối soát hồ sơ chứng từ thực tế khi nhà cung cấp cũ bị cơ quan thuế thông báo không hoạt động tại địa chỉ đăng ký.',
+    prompt:
+      'Doanh nghiệp nhận được thông báo/thư mời từ cơ quan thuế về việc rà soát các hóa đơn đầu vào của một nhà cung cấp linh kiện từ năm trước, lý do nhà cung cấp này hiện đã bị khóa mã số thuế hoặc bỏ trốn khỏi địa chỉ kinh doanh:\n1. Hóa đơn mua hàng trước thời điểm cơ quan thuế ra thông báo nhà cung cấp bỏ trốn có mặc nhiên bị loại khỏi chi phí được trừ và khấu trừ thuế GTGT không?\n2. Doanh nghiệp cần chuẩn bị bộ hồ sơ chứng minh giao dịch có thật gồm những tài liệu gì (hợp đồng, biên bản giao nhận, phiếu kho, chứng từ thanh toán ngân hàng, nhật ký vận chuyển...)?\n3. Quy trình giải trình và các bước xử lý nếu cơ quan thuế vẫn yêu cầu điều chỉnh giảm trừ thuế GTGT và tính tiền chậm nộp?\nTrích dẫn quy định pháp luật và các văn bản chỉ đạo của ngành thuế hiện hành.',
+    config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
+  },
+  {
+    id: 'legal_construction_milestone_invoice',
+    title: 'Xuất Hóa đơn Dịch vụ dài hạn & Xây lắp',
+    category: 'legal',
+    categoryLabel: 'Xây dựng & Dịch vụ',
+    icon: FileText,
+    color: 'from-blue-600 to-cyan-700',
+    badgeColor: 'bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+    description: 'Quy định lập hóa đơn theo biên bản nghiệm thu giai đoạn/hạng mục hoàn thành, hợp đồng cung ứng dịch vụ nhiều kỳ.',
+    prompt:
+      'Doanh nghiệp thực hiện hợp đồng thi công xây lắp hoặc cung cấp dịch vụ công nghệ kéo dài từ 6 tháng đến 1 năm, thanh toán chia làm nhiều đợt theo biên bản nghiệm thu khối lượng công việc từng giai đoạn:\n1. Thời điểm bắt buộc phải lập hóa đơn điện tử là khi nào: ngay sau khi ký biên bản nghiệm thu từng giai đoạn hay đợi đến khi quyết toán thanh lý toàn bộ hợp đồng?\n2. Nếu hai bên đã ký biên bản bàn giao nghiệm thu hạng mục nhưng chủ đầu tư chưa thanh toán tiền thì bên nhận thầu có được hoãn xuất hóa đơn không?\n3. Rủi ro bị cơ quan thuế xử phạt hành vi xuất hóa đơn sai thời điểm và truy thu thuế GTGT từng kỳ được pháp luật hiện hành quy định như thế nào?\nTrích dẫn rõ căn cứ pháp luật hiện hành.',
     config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
   },
   {
     id: 'legal_contract_review',
-    title: 'Rà soát Hợp đồng & Phạt vi phạm',
+    title: 'Rà soát Hợp đồng & Chế tài Phạt vi phạm',
     category: 'legal',
     categoryLabel: 'Pháp luật Doanh nghiệp',
     icon: FileText,
     color: 'from-indigo-600 to-purple-700',
     badgeColor: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
-    description: 'Đánh giá tính pháp lý điều khoản phạt vi phạm 20% trong hợp đồng thương mại theo Điều 300, 301 Luật Thương mại 2005.',
+    description: 'Đánh giá tính hợp pháp điều khoản phạt vi phạm hợp đồng thương mại, phân biệt phạt vi phạm và bồi thường thiệt hại, drafting an toàn.',
     prompt:
-      'Tôi đang chuẩn bị ký Hợp đồng cung ứng dịch vụ công nghệ với đối tác. Đối tác đưa vào điều khoản: "Nếu bên B chậm tiến độ giao hàng dù chỉ 1 ngày thì phải chịu phạt vi phạm 20% tổng giá trị hợp đồng và bồi thường toàn bộ thiệt hại phát sinh". Xin luật sư rà soát:\n1. Mức phạt vi phạm 20% này có vượt quá trần quy định của Luật Thương mại 2005 (Điều 301) không?\n2. Phân biệt rõ giữa "Phạt vi phạm" và "Bồi thường thiệt hại", có được áp dụng đồng thời cả hai chế tài không?\n3. Đề xuất câu chữ sửa đổi (Drafting) lại điều khoản này để cân bằng quyền lợi và bảo vệ an toàn pháp lý cho bên tôi.',
+      'Tôi đang chuẩn bị ký Hợp đồng cung ứng dịch vụ công nghệ với đối tác. Đối tác đưa vào điều khoản: "Nếu bên B chậm tiến độ giao hàng dù chỉ 1 ngày thì phải chịu phạt vi phạm 20% tổng giá trị hợp đồng và bồi thường toàn bộ thiệt hại phát sinh". Xin luật sư rà soát:\n1. Mức phạt vi phạm 20% này có vượt quá mức trần tối đa theo quy định pháp luật thương mại hiện hành không?\n2. Phân biệt rõ giữa chế tài "Phạt vi phạm" và "Bồi thường thiệt hại", có được áp dụng đồng thời cả hai chế tài này trong cùng một hợp đồng không?\n3. Đề xuất phương án sửa đổi câu chữ (Drafting) lại điều khoản này để bảo đảm tính pháp lý chặt chẽ, cân bằng quyền lợi và bảo vệ an toàn tối đa cho bên tôi.\nTrích dẫn căn cứ điều luật cụ thể theo hệ thống pháp luật hiện hành.',
     config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.2 },
-  },
-  {
-    id: 'legal_tax_expenses',
-    title: 'Chi phí được trừ Thuế TNDN (>20 triệu)',
-    category: 'legal',
-    categoryLabel: 'Thuế & Tài chính',
-    icon: FileText,
-    color: 'from-emerald-600 to-teal-700',
-    badgeColor: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
-    description: 'Xử lý tình huống thanh toán tiền mặt hóa đơn trên 20 triệu đồng và phương án khắc phục để được trừ thuế TNDN.',
-    prompt:
-      'Doanh nghiệp mua lô thiết bị văn phòng trị giá 25 triệu đồng có hóa đơn GTGT hợp pháp, nhưng nhân viên mua hàng lỡ thanh toán bằng tiền mặt (rút tiền từ tài khoản cá nhân). Xin chuyên gia tư vấn:\n1. Chi phí này có được tính vào chi phí được trừ khi tính thuế TNDN và có được khấu trừ thuế GTGT đầu vào không theo Thông tư 78/2014 và Thông tư 219/2013?\n2. Doanh nghiệp có thể xử lý khắc phục bằng cách nào để chi phí này được cơ quan thuế chấp nhận hợp lệ?',
-    config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.1 },
   },
   {
     id: 'legal_labor_termination',
@@ -106,9 +197,9 @@ export const PRESETS: PresetItem[] = [
     icon: FileText,
     color: 'from-rose-600 to-pink-700',
     badgeColor: 'bg-rose-50 text-rose-700 dark:bg-rose-950/60 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-    description: 'Quy trình đơn phương chấm dứt hợp đồng lao động khi nhân viên không đạt KPI, thời hạn báo trước theo BLLĐ 2019.',
+    description: 'Quy trình đơn phương chấm dứt hợp đồng khi nhân sự không đạt hiệu quả công việc, thời hạn báo trước và hồ sơ đánh giá chuẩn.',
     prompt:
-      'Nhân viên công ty thường xuyên đi muộn và không hoàn thành chỉ tiêu KPI 2 tháng liên tiếp. Giám đốc muốn cho nghỉ việc ngay trong tuần này. Xin tư vấn pháp lý lao động:\n1. Doanh nghiệp có được đơn phương chấm dứt hợp đồng lao động ngay không? Thời hạn báo trước theo Điều 36 Bộ luật Lao động 2019 là bao lâu?\n2. Hồ sơ, quy trình đánh giá mức độ không hoàn thành công việc cần đáp ứng tiêu chí gì để tránh bị người lao động kiện tụng vì sa thải trái pháp luật?',
+      'Nhân viên công ty thường xuyên đi muộn và không hoàn thành chỉ tiêu công việc 2 tháng liên tiếp. Giám đốc muốn cho nghỉ việc ngay trong tuần này. Xin luật sư tư vấn pháp lý lao động:\n1. Doanh nghiệp có được quyền đơn phương chấm dứt hợp đồng lao động ngay lập tức không? Thời hạn báo trước theo quy định pháp luật lao động hiện hành là bao lâu?\n2. Hồ sơ, quy trình đánh giá mức độ không hoàn thành công việc cần đáp ứng những tiêu chí và điều kiện gì để đảm bảo tính pháp lý, tránh rủi ro bị khởi kiện sa thải trái luật?\nTrích dẫn rõ các điều khoản trong pháp luật lao động hiện hành.',
     config: { model: 'gemini-2.5-flash', streaming: true, temperature: 0.2 },
   },
 

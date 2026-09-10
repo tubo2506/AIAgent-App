@@ -25,7 +25,7 @@ export const BUILT_IN_AGENTS: Agent[] = [
   {
     id: 'tax-accounting-law',
     name: 'Cố Vấn Luật Kế Toán & Thuế',
-    description: 'Chuyên gia tư vấn pháp luật thuế, kế toán, hóa đơn chứng từ (ưu tiên Nghị định 70/2025, Nghị định 254/2026, NĐ 123/2020, NĐ 125/2020), giải quyết tình huống ad-hoc và trích dẫn điều khoản chính xác.',
+    description: 'Chuyên gia tư vấn pháp luật thuế, kế toán, hóa đơn chứng từ hiện hành, giải quyết tình huống ad-hoc và trích dẫn điều khoản chính xác theo các quy định mới nhất.',
     avatar: '⚖️',
     category: 'legal_tax',
     categoryLabel: 'Luật & Thuế KT',
@@ -85,7 +85,7 @@ NGUYÊN TẮC VÀ CẤU TRÚC PHẢN HỒI:
    - Tư vấn giải pháp vừa TUÂN THỦ 100% PHÁP LUẬT MỚI NHẤT, vừa CÓ LỢI NHẤT cho dòng tiền doanh nghiệp.
 
 6. 💡 GỢI Ý CÂU HỎI TIẾP THEO (Follow-up Suggestions):
-   - Luôn kết thúc bằng 2 đến 3 câu hỏi gợi ý mở rộng vấn đề (ưu tiên gắn với các điểm mới trong NĐ 70/2025, NĐ 254/2026).
+   - Luôn kết thúc bằng 2 đến 3 câu hỏi gợi ý mở rộng vấn đề (ưu tiên gắn với các quy định pháp luật hiện hành mới nhất).
    - Trình bày chính xác theo cấu trúc sau:
 ---
 ### 💡 Gợi ý câu hỏi tiếp theo:
@@ -95,11 +95,12 @@ NGUYÊN TẮC VÀ CẤU TRÚC PHẢN HỒI:
 
 GIỌNG ĐIỆU: Khách quan, chuẩn xác, sắc bén của Luật sư Thuế & Cố vấn Kế toán trưởng cấp cao, lấy lợi ích hợp pháp và an toàn bền vững của doanh nghiệp làm kim chỉ nam.`,
     starterPrompts: [
-      'Khách mua hàng trong tháng nhưng tháng sau mới trả tiền: Quy định thời điểm xuất hóa đơn mới nhất theo NĐ 70/2025 và NĐ 123?',
-      'Hộ kinh doanh doanh thu trên 1 tỷ đồng: Khi nào bắt buộc dùng hóa đơn máy tính tiền kết nối cơ quan thuế theo NĐ 70/2025 và NĐ 254/2026?',
-      'Hóa đơn điện tử đã gửi khách bị sai sót đơn giá: Thủ tục xử lý điều chỉnh hay thay thế theo NĐ 70/2025, NĐ 123 và Mẫu 01/TB-HĐSS (NĐ 41)?',
-      'Quy định xác thực sinh trắc học trên eTax Mobile khi đăng ký, thay đổi thông tin sử dụng hóa đơn điện tử theo NĐ 70/2025?',
-      'Bán hàng cho sàn thương mại điện tử và nhà cung cấp nước ngoài: Quy định xuất hóa đơn điện tử theo NĐ 70/2025 và NĐ 254/2026?',
+      'Khách mua hàng trong tháng nhưng tháng sau mới thanh toán: Quy định thời điểm lập hóa đơn điện tử hiện hành thế nào và có được hoãn xuất không?',
+      'Hộ kinh doanh và doanh nghiệp bán lẻ: Trường hợp nào bắt buộc phải áp dụng hóa đơn điện tử khởi tạo từ máy tính tiền?',
+      'Hóa đơn điện tử đã cấp mã và gửi khách bị sai sót: Hướng dẫn chi tiết thủ tục chọn lập Hóa đơn điều chỉnh hay Thay thế và nộp mẫu thông báo sai sót?',
+      'Thủ tục và yêu cầu xác thực định danh, sinh trắc học của người đại diện pháp luật khi đăng ký sử dụng hóa đơn điện tử?',
+      'Bán hàng qua sàn thương mại điện tử, livestream và xuất khẩu: Trách nhiệm và thời điểm xuất hóa đơn điện tử được quy định như thế nào?',
+      'Mua hàng hóa dịch vụ trên 20 triệu thanh toán tiền mặt: Quy định hiện hành về điều kiện khấu trừ thuế GTGT và tính chi phí hợp lý thế nào?',
     ],
   },
   {

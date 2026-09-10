@@ -7,10 +7,10 @@ export interface ParsedMessageContent {
 
 const DEFAULT_FALLBACK_QUESTIONS: Record<string, string[]> = {
   'tax-accounting-law': [
-    'Quy định thời điểm xuất hóa đơn bán hàng hóa và dịch vụ theo Nghị định 70/2025 mới nhất?',
-    'Điều kiện và lộ trình bắt buộc dùng hóa đơn máy tính tiền đối với hộ kinh doanh theo NĐ 70/2025 và NĐ 254/2026?',
-    'Thủ tục gửi Mẫu 01/TB-HĐSS và các bước xử lý hóa đơn sai sót theo NĐ 70/2025 và NĐ 41/2022?',
-    'Quy định xác thực sinh trắc học trên eTax Mobile khi đăng ký hóa đơn điện tử theo NĐ 70/2025?',
+    'Quy định pháp luật hiện hành về thời điểm xuất hóa đơn đối với hoạt động bán hàng hóa và dịch vụ?',
+    'Điều kiện và lộ trình bắt buộc áp dụng hóa đơn điện tử khởi tạo từ máy tính tiền kết nối cơ quan thuế?',
+    'Thủ tục chi tiết và các bước xử lý khi phát hiện hóa đơn điện tử đã gửi khách hàng có sai sót?',
+    'Quy định về việc xác thực định danh, sinh trắc học của người đại diện khi sử dụng hóa đơn điện tử?',
   ],
   'code-expert': [
     'Cách viết Unit Test và xử lý các trường hợp biên (Edge Cases) cho bài toán này?',
