@@ -1780,6 +1780,54 @@ export const ChatTab: React.FC<ChatTabProps> = ({
             </div>
           )}
 
+          {/* Quick Action Toolbar: Web Search & Features */}
+          <div className={`${containerWidthClass} mx-auto mb-2 flex items-center justify-between gap-2 flex-wrap`}>
+            <div className="flex items-center gap-2">
+              {/* Prominent Google Search Grounding Switch */}
+              <button
+                type="button"
+                onClick={() =>
+                  onConfigChange?.({
+                    enableSearchGrounding: !(config.enableSearchGrounding ?? true),
+                  })
+                }
+                className={`flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                  (config.enableSearchGrounding ?? true)
+                    ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm ring-2 ring-blue-500/20'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+                title="Bấm để bật/tắt tính năng tìm kiếm Google thời gian thực cho mọi câu hỏi"
+              >
+                <Globe className={`w-3.5 h-3.5 ${(config.enableSearchGrounding ?? true) ? 'animate-pulse' : ''}`} />
+                <span>Tra cứu Web Google</span>
+                <span
+                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                    (config.enableSearchGrounding ?? true)
+                      ? 'bg-blue-800 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {(config.enableSearchGrounding ?? true) ? 'ĐANG BẬT' : 'ĐANG TẮT'}
+                </span>
+              </button>
+
+              {(config.enableSearchGrounding ?? true) ? (
+                <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
+                  <span>Tự động tìm kiếm luật, nghị định và tin mới nhất</span>
+                </span>
+              ) : (
+                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-slate-400">
+                  <span>Chế độ trí nhớ tĩnh (không tra cứu web)</span>
+                </span>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 text-[11px] text-slate-400">
+              <span>Model: <strong className="text-slate-600 dark:text-slate-300 font-mono">{config.model}</strong></span>
+            </div>
+          </div>
+
           <div
             onClick={(e) => {
               if (e.target === e.currentTarget) {
@@ -1829,13 +1877,14 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                   ? '🌐 Tra cứu Web thời gian thực (Google Search: ĐANG BẬT) - Bấm để tắt'
                   : '🌐 Tra cứu Web qua Google Search (ĐANG TẮT) - Bấm để bật'
               }
-              className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${
+              className={`flex items-center gap-1 px-2 sm:px-2.5 py-2 rounded-xl transition-all cursor-pointer shrink-0 text-xs font-semibold ${
                 (config.enableSearchGrounding ?? true)
-                  ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/80 shadow-2xs font-medium'
-                  : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800'
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs ring-1 ring-blue-400'
+                  : 'text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-200/70 dark:hover:bg-slate-800'
               }`}
             >
               <Globe className="w-4 h-4" />
+              <span className="hidden sm:inline">Web Search</span>
             </button>
 
             <textarea
