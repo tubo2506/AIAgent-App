@@ -1701,16 +1701,35 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                       </button>
 
                       {isError && (
-                        <button
-                          onClick={() => {
-                            const lastUser = [...messages].reverse().find((msg) => msg.role === 'user');
-                            if (lastUser) handleRetry(lastUser.content);
-                          }}
-                          className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors font-medium"
-                        >
-                          <RotateCcw className="w-3 h-3" />
-                          <span>Thử lại câu này</span>
-                        </button>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <button
+                            onClick={() => {
+                              const lastUser = [...messages].reverse().find((msg) => msg.role === 'user');
+                              if (lastUser) handleRetry(lastUser.content);
+                            }}
+                            className="flex items-center gap-1 px-2 py-0.5 rounded text-[11px] text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer transition-colors font-medium"
+                          >
+                            <RotateCcw className="w-3 h-3" />
+                            <span>Thử lại</span>
+                          </button>
+
+                          {config.enableSearchGrounding && (
+                            <button
+                              onClick={() => {
+                                onConfigChange?.({ enableSearchGrounding: false });
+                                const lastUser = [...messages].reverse().find((msg) => msg.role === 'user');
+                                if (lastUser) {
+                                  setTimeout(() => handleRetry(lastUser.content), 100);
+                                }
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-0.5 rounded text-[11px] text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800 cursor-pointer transition-colors font-medium shadow-2xs"
+                              title="Tắt tính năng Google Search Grounding để không bị lỗi hạn mức và nhận câu trả lời ngay"
+                            >
+                              <Globe className="w-3 h-3" />
+                              <span>Tắt Tra Cứu Web & Thử Lại Ngay</span>
+                            </button>
+                          )}
+                        </div>
                       )}
                     </div>
                   )}

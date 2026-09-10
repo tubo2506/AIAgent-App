@@ -192,6 +192,12 @@ export async function sendGeminiRequest(
         friendlyError = 'API Key không hợp lệ hoặc không có quyền truy cập endpoint này.';
       } else if (response.status === 504 || response.status === 502) {
         friendlyError = 'Proxy server quá thời gian chờ (Gateway Timeout). Bạn nên tắt chế độ "Local Proxy" để gọi trực tiếp tới Google nhanh hơn.';
+      } else if (response.status === 429) {
+        if (config.enableSearchGrounding) {
+          friendlyError = 'Tính năng Google Search Grounding yêu cầu Google Cloud Project của API Key đã liên kết tài khoản thanh toán (Billing). Tài khoản miễn phí (chưa add thẻ) bị giới hạn tính năng tìm kiếm này. Bạn hãy bấm "TẮT Tra cứu Web" trên ô chat để tiếp tục trò chuyện bình thường!';
+        } else {
+          friendlyError = 'Đã vượt quá giới hạn tần suất gọi API (Rate Limit / Quota). Vui lòng đợi vài giây rồi thử lại.';
+        }
       }
 
       return {
@@ -296,6 +302,12 @@ export async function sendGeminiStreamingRequest(
         friendlyError = 'API Key không hợp lệ hoặc không có quyền truy cập endpoint này.';
       } else if (response.status === 504 || response.status === 502) {
         friendlyError = 'Proxy server quá thời gian chờ (Gateway Timeout). Bạn nên tắt chế độ "Local Proxy" để gọi trực tiếp tới Google nhanh hơn.';
+      } else if (response.status === 429) {
+        if (config.enableSearchGrounding) {
+          friendlyError = 'Tính năng Google Search Grounding yêu cầu Google Cloud Project của API Key đã liên kết tài khoản thanh toán (Billing). Tài khoản miễn phí (chưa add thẻ) bị giới hạn tính năng tìm kiếm này. Bạn hãy bấm "TẮT Tra cứu Web" trên ô chat để tiếp tục trò chuyện bình thường!';
+        } else {
+          friendlyError = 'Đã vượt quá giới hạn tần suất gọi API (Rate Limit / Quota). Vui lòng đợi vài giây rồi thử lại.';
+        }
       }
 
       return {
