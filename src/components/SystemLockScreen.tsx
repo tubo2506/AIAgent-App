@@ -67,6 +67,8 @@ export const SystemLockScreen: React.FC<SystemLockScreenProps> = ({
     } catch (err: any) {
       if (err.code === 'auth/popup-closed-by-user') {
         setGoogleError('Bạn đã đóng cửa sổ đăng nhập Google.');
+      } else if (err.code === 'auth/configuration-not-found' || err.code === 'auth/operation-not-allowed') {
+        setGoogleError('Chưa bật tính năng đăng nhập Google trên Firebase Console. Vui lòng vào Firebase Console > Authentication > Sign-in method và Bật (Enable) Google.');
       } else {
         setGoogleError('Lỗi đăng nhập: ' + (err.message || 'Không thể kết nối.'));
       }
