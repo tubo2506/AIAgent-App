@@ -18,7 +18,7 @@ import {
 
 const DEFAULT_CONFIG: ApiConfig = {
   apiKey: (import.meta as any).env?.VITE_GEMINI_API_KEY || '',
-  model: 'gemini-flash-lite-latest', // Model siêu nhanh ~1s, không bị thinking delay
+  model: 'gemini-3.5-flash', // Model Gemini 3.5 Flash tốc độ cao & suy luận thông minh
   apiVersion: 'v1beta',
   authMode: 'header',
   useProxy: false, // Gọi trực tiếp Google API (nhanh x3 lần, không nghẽn Proxy Node)
@@ -101,6 +101,10 @@ export function App() {
         // Tự động cập nhật Tavily API Key nếu chưa có
         if (!parsed.tavilyApiKey) {
           parsed.tavilyApiKey = DEFAULT_CONFIG.tavilyApiKey;
+        }
+        // Tự động chuyển model sang gemini-3.5-flash nếu chưa có hoặc đang dùng default cũ
+        if (!parsed.model || parsed.model === 'gemini-flash-lite-latest') {
+          parsed.model = 'gemini-3.5-flash';
         }
         return { ...DEFAULT_CONFIG, ...parsed };
       }

@@ -47,8 +47,10 @@ function normalizeDocument(doc: any): KnowledgeDocument {
   };
 }
 
+import { DEFAULT_LEGAL_KNOWLEDGE } from '../data/defaultKnowledge';
+
 /**
- * Lấy tất cả văn bản trong kho
+ * Lấy tất cả văn bản trong kho (Tự động nạp sẵn 5 Nghị định luật thuế & hóa đơn nếu kho trống)
  */
 export async function getAllDocuments(): Promise<KnowledgeDocument[]> {
   const db = await openDB();
@@ -57,8 +59,24 @@ export async function getAllDocuments(): Promise<KnowledgeDocument[]> {
     const store = tx.objectStore(STORE_NAME);
     const request = store.getAll();
 
-    request.onsuccess = () => {
-      const rawDocs = request.result || [];
+    request.onsuccess = async () => {
+      let rawDocs = request.result || [];
+
+      // Nếu kho trên máy người dùng còn trống, tự động nạp 5 văn bản luật nền tảng
+      if (rawDocs.length === 0 && DEFAULT_LEGAL_KNOWLEDGE && DEFAULT_LEGAL_KNOWLEDGE.length > 0) {
+        try {
+          const writeTx = db.transaction(STORE_NAME, 'readwrite');
+          const writeStore = writeTx.objectStore(STORE_NAME);
+          for (const doc of DEFAULT_LEGAL_KNOWLEDGE) {
+            writeStore.put(normalizeDocument(doc));
+          }
+          rawDocs = [...DEFAULT_LEGAL_KNOWLEDGE];
+        } catch (seedErr) {
+          console.warn('Không thể tự động nạp tri thức mẫu vào IndexedDB:', seedErr);
+          rawDocs = [...DEFAULT_LEGAL_KNOWLEDGE];
+        }
+      }
+
       const docs: KnowledgeDocument[] = rawDocs.map(normalizeDocument);
       docs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       resolve(docs);
@@ -68,6 +86,23 @@ export async function getAllDocuments(): Promise<KnowledgeDocument[]> {
       reject(request.error || new Error('Lỗi đọc danh sách văn bản'));
     };
   });
+}
+
+/**
+ * Nạp hoặc khôi phục 5 Nghị định pháp luật mặc định vào Kho Tri Thức
+ */
+export async function seedDefaultKnowledge(): Promise<number> {
+  const db = await openDB();
+  const tx = db.transaction(STORE_NAME, 'readwrite');
+  const store = tx.objectStore(STORE_NAME);
+  let count = 0;
+
+  for (const doc of DEFAULT_LEGAL_KNOWLEDGE) {
+    store.put(normalizeDocument(doc));
+    count++;
+  }
+
+  return count;
 }
 
 /**

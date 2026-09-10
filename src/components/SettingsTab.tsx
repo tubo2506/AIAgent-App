@@ -39,6 +39,20 @@ interface SettingsTabProps {
 
 const PRESET_MODELS = [
   {
+    id: 'gemini-3.5-flash-lite',
+    name: 'gemini-3.5-flash-lite',
+    badge: '🚀 NHIỀU QUOTA NHẤT (3.5 Flash-Lite)',
+    badgeColor: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300',
+    desc: 'Mô hình tiết kiệm hạn ngạch Free Tier cao nhất (RPM & RPD lớn nhất), tối ưu hóa chi phí và phản hồi siêu nhanh.',
+  },
+  {
+    id: 'gemini-3.5-flash',
+    name: 'gemini-3.5-flash',
+    badge: '⚡ CÂN BẰNG (3.5 Flash)',
+    badgeColor: 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-300',
+    desc: 'Mô hình Gemini 3.5 Flash tốc độ cao, xử lý thông minh và phản hồi tức thì.',
+  },
+  {
     id: 'gemini-flash-lite-latest',
     name: 'gemini-flash-lite-latest',
     badge: '⚡ SIÊU TỐC (~1s)',
@@ -51,13 +65,6 @@ const PRESET_MODELS = [
     badge: '🧠 SUY LUẬN SÂU (Mới nhất)',
     badgeColor: 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-300',
     desc: 'Mô hình tiêu chuẩn thế hệ mới nhất của Google. Tối ưu cho OCR, phân tích tài liệu phức tạp và viết code.',
-  },
-  {
-    id: 'gemini-3.5-flash-lite',
-    name: 'gemini-3.5-flash-lite',
-    badge: '🚀 Ổn định',
-    badgeColor: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300',
-    desc: 'Phiên bản rút gọn thế hệ 3.5, cân bằng giữa chi phí và tốc độ.',
   },
   {
     id: 'gemini-2.5-flash',

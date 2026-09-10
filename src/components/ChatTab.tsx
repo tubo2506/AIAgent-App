@@ -2284,7 +2284,9 @@ export const ChatTab: React.FC<ChatTabProps> = ({
 
                 <div className="space-y-1.5">
                   {[
-                    { id: 'gemini-flash-lite-latest', label: 'Flash-Lite (~1s)', desc: 'Siêu tốc độ, phản hồi nhanh nhất' },
+                    { id: 'gemini-3.5-flash-lite', label: '3.5-Flash-Lite (Nhiều Quota nhất)', desc: 'Tối ưu hạn ngạch Free Tier cao nhất & phản hồi siêu tốc' },
+                    { id: 'gemini-3.5-flash', label: '3.5-Flash (Cân bằng)', desc: 'Tốc độ cao & suy luận thông minh' },
+                    { id: 'gemini-flash-lite-latest', label: 'Flash-Lite-Latest (~1s)', desc: 'Siêu tốc độ, phản hồi nhanh nhất' },
                     { id: 'gemini-3.6-flash', label: '3.6-Flash (Chuẩn)', desc: 'Cân bằng thông minh & đa phương tiện' },
                     { id: 'gemini-2.5-pro', label: '2.5-Pro (Chuyên sâu)', desc: 'Suy luận logic cao cấp & tài liệu lớn' },
                   ].map((m) => {

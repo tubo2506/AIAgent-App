@@ -25,6 +25,7 @@ import {
   assignDocumentScope,
   exportDocumentsJson,
   importDocumentsJson,
+  seedDefaultKnowledge,
 } from '../services/legalKnowledgeDb';
 import { BUILT_IN_AGENTS } from '../data/defaultAgents';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -187,35 +188,49 @@ Yêu cầu nghiêm ngặt:
 
       setDigitizeProgress('AI đang trích xuất toàn bộ dữ liệu và nén sang Markdown siêu nhẹ...');
 
-      const targetModel = config.model.includes('flash') ? config.model : 'gemini-2.5-flash';
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${targetModel}:generateContent?key=${config.apiKey}`;
+      let targetModel = config.model;
+      if (targetModel === 'gemini-3.6-flash' || !targetModel.includes('flash')) {
+        // Tối ưu quota cao nhất cho số hóa: ưu tiên dùng 3.5-flash-lite
+        targetModel = 'gemini-3.5-flash-lite';
+      }
 
-      const res = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [
-                {
-                  inlineData: {
-                    mimeType,
-                    data: fileBase64,
+      const requestDigitize = async (modelToUse: string) => {
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${modelToUse}:generateContent?key=${config.apiKey}`;
+        return fetch(endpoint, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [
+              {
+                role: 'user',
+                parts: [
+                  {
+                    inlineData: {
+                      mimeType,
+                      data: fileBase64,
+                    },
                   },
-                },
-                {
-                  text: digitizationPrompt,
-                },
-              ],
+                  {
+                    text: digitizationPrompt,
+                  },
+                ],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.1,
+              maxOutputTokens: 8192,
             },
-          ],
-          generationConfig: {
-            temperature: 0.1,
-            maxOutputTokens: 8192,
-          },
-        }),
-      });
+          }),
+        });
+      };
+
+      let res = await requestDigitize(targetModel);
+
+      // Nếu model bị 429 quá quota, tự động fallback sang gemini-flash-lite-latest
+      if (!res.ok && res.status === 429 && targetModel !== 'gemini-flash-lite-latest') {
+        setDigitizeProgress('Model đạt giới hạn quota, tự động chuyển sang gemini-flash-lite-latest...');
+        res = await requestDigitize('gemini-flash-lite-latest');
+      }
 
       if (!res.ok) {
         const errData = await res.json();
@@ -1077,6 +1092,31 @@ Yêu cầu nghiêm ngặt:
                       className="hidden"
                     />
                   </label>
+                </div>
+
+                <div className="p-4 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-indigo-50/50 dark:bg-indigo-950/30 space-y-3">
+                  <h3 className="text-sm font-bold text-indigo-900 dark:text-indigo-200 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    Đồng bộ 5 Nghị Định Luật Thuế & Hóa Đơn Chuẩn (Có sẵn)
+                  </h3>
+                  <p className="text-xs text-indigo-700 dark:text-indigo-300 leading-relaxed">
+                    Khôi phục hoặc nạp sẵn toàn bộ 5 Nghị định chuẩn vào hệ thống: NĐ 123/2020/NĐ-CP, NĐ 70/2025/NĐ-CP, NĐ 254/2026/NĐ-CP, NĐ 15/2022/NĐ-CP, NĐ 41/2022/NĐ-CP. Đã được nén tối ưu ~99% và gán sẵn cho "Cố Vấn Luật Kế Toán & Thuế".
+                  </p>
+                  <button
+                    onClick={async () => {
+                      try {
+                        const count = await seedDefaultKnowledge();
+                        await loadDocs();
+                        alert(`🎉 Đã nạp thành công ${count} Nghị định luật thuế & hóa đơn vào hệ thống!`);
+                      } catch (err: any) {
+                        alert('Lỗi nạp tri thức: ' + (err.message || err));
+                      }
+                    }}
+                    className="px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-xl hover:bg-indigo-500 flex items-center gap-1.5 cursor-pointer shadow-xs"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    <span>Nạp / Khôi phục 5 Nghị Định Chuẩn Ngay</span>
+                  </button>
                 </div>
               </div>
             )}

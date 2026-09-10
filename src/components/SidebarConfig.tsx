@@ -20,8 +20,9 @@ interface SidebarConfigProps {
 }
 
 const PRESET_MODELS = [
-  { id: 'gemini-flash-lite-latest', name: 'gemini-flash-lite-latest', note: '⚡ SIÊU NHANH (~1s, Trả lời tức thì)' },
+  { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash', note: '⚡ Gemini 3.5 Flash (Mặc định)' },
   { id: 'gemini-3.5-flash-lite', name: 'gemini-3.5-flash-lite', note: '⚡ Bản 3.5 Lite (Tốc độ cao)' },
+  { id: 'gemini-flash-lite-latest', name: 'gemini-flash-lite-latest', note: '⚡ SIÊU NHANH (~1s, Trả lời tức thì)' },
   { id: 'gemini-3.6-flash', name: 'gemini-3.6-flash', note: 'Model chuẩn mới nhất (Suy luận sâu)' },
   { id: 'gemini-3-flash', name: 'gemini-3-flash', note: 'Tên model trong cURL của bạn' },
   { id: 'gemini-2.5-flash', name: 'gemini-2.5-flash', note: 'Bản 2.5 Flash' },
@@ -87,13 +88,13 @@ export const SidebarConfig: React.FC<SidebarConfigProps> = ({ config, onChange }
             <span>🌐 Tra cứu Web ({config.searchProvider === 'google' ? 'Google' : 'Tavily'})</span>
           </label>
 
-          {config.model !== 'gemini-flash-lite-latest' && (
+          {config.model !== 'gemini-3.5-flash' && (
             <button
-              onClick={() => update({ model: 'gemini-flash-lite-latest' })}
-              className="w-full mt-1 flex items-center justify-center gap-1.5 py-1 px-2 text-[11px] font-semibold rounded bg-amber-500/20 hover:bg-amber-500 text-amber-900 hover:text-white dark:text-amber-200 transition-colors"
+              onClick={() => update({ model: 'gemini-3.5-flash' })}
+              className="w-full mt-1 flex items-center justify-center gap-1.5 py-1 px-2 text-[11px] font-semibold rounded bg-blue-500/20 hover:bg-blue-500 text-blue-900 hover:text-white dark:text-blue-200 transition-colors"
             >
               <Sparkles className="w-3 h-3" />
-              <span>Chuyển sang Flash-Lite (~1s)</span>
+              <span>Chuyển sang Gemini 3.5 Flash</span>
             </button>
           )}
         </div>
@@ -156,7 +157,7 @@ export const SidebarConfig: React.FC<SidebarConfigProps> = ({ config, onChange }
             type="text"
             value={config.model}
             onChange={(e) => update({ model: e.target.value.trim() })}
-            placeholder="Nhập mã model (VD: gemini-flash-lite-latest)..."
+            placeholder="Nhập mã model (VD: gemini-3.5-flash)..."
             className="w-full mt-1 bg-slate-50 dark:bg-slate-950/80 border border-indigo-400 dark:border-indigo-500/60 rounded-lg px-3 py-1.5 text-xs font-mono text-indigo-700 dark:text-indigo-300 placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-indigo-500"
           />
         )}
