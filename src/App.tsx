@@ -30,6 +30,7 @@ const DEFAULT_CONFIG: ApiConfig = {
   topP: 0.95,
   topK: 40,
   maxOutputTokens: 8192, // Tăng lên 8192 để các model suy luận (thinking) không bị ngắt giữa chừng
+  enableSearchGrounding: true, // Mặc định BẬT tra cứu Google Search thời gian thực cho kiến thức mới nhất
 };
 
 const STORAGE_CONFIG_KEY = 'gemini_studio_config_v2';

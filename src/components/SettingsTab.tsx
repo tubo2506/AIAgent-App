@@ -488,7 +488,7 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
             </div>
 
             {/* Streaming SSE Toggle */}
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
               <label className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer">
                 <input
                   type="checkbox"
@@ -507,6 +507,29 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
                     Mô hình sinh chữ liên tục theo thời gian thực (tương tự ChatGPT), loại bỏ cảm giác chờ đợi.
+                  </p>
+                </div>
+              </label>
+
+              {/* Google Search Grounding Toggle */}
+              <label className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-300 dark:hover:border-slate-750 transition-colors">
+                <input
+                  type="checkbox"
+                  checked={config.enableSearchGrounding ?? true}
+                  onChange={(e) => update({ enableSearchGrounding: e.target.checked })}
+                  className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0"
+                />
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                      Tra Cứu Web Thời Gian Thực (Google Search Grounding)
+                    </span>
+                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-600 text-white font-bold">
+                      LIVE
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                    Cho phép Gemini tự động tìm kiếm trên Google khi bạn hỏi về luật mới, tin tức, nghị định về hóa đơn hoặc sự kiện cập nhật gần đây.
                   </p>
                 </div>
               </label>

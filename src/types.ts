@@ -15,6 +15,34 @@ export interface ApiConfig {
   topP: number;
   topK: number;
   maxOutputTokens: number;
+  enableSearchGrounding?: boolean; // Tra cứu Web thời gian thực qua Google Search
+}
+
+export interface GroundingSource {
+  title: string;
+  url: string;
+}
+
+export interface GroundingMetadata {
+  webSearchQueries?: string[];
+  searchEntryPoint?: {
+    renderedContent?: string;
+  };
+  groundingChunks?: Array<{
+    web?: {
+      uri?: string;
+      title?: string;
+    };
+  }>;
+  groundingSupports?: Array<{
+    groundingChunkIndices?: number[];
+    confidenceScores?: number[];
+    segment?: {
+      startIndex?: number;
+      endIndex?: number;
+      text?: string;
+    };
+  }>;
 }
 
 export interface UploadedFile {
@@ -42,6 +70,7 @@ export interface ChatMessage {
     totalTokens?: number;
   };
   suggestedQuestions?: string[];
+  groundingMetadata?: GroundingMetadata;
 }
 
 export interface RequestHistoryItem {

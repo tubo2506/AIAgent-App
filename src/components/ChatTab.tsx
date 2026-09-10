@@ -32,6 +32,8 @@ import {
   Sliders,
   FileDown,
   Users,
+  Globe,
+  ExternalLink,
 } from './icons';
 import type { ApiConfig, ChatMessage, RequestHistoryItem, UploadedFile, Agent, ChatSession } from '../types';
 import {
@@ -40,6 +42,8 @@ import {
   buildPayload,
   extractResponseText,
   extractTokenUsage,
+  extractGroundingMetadata,
+  extractGroundingSources,
 } from '../services/geminiApi';
 import { parseFollowUpQuestions } from '../services/followUpHelper';
 import { MarkdownRenderer } from './MarkdownRenderer';
@@ -960,6 +964,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
 
         if (response.success) {
           const tokens = extractTokenUsage(response.data);
+          const groundingMetadata = extractGroundingMetadata(response.data);
           updateCurrentMessages((prev) =>
             prev.map((msg) => {
               if (msg.id !== modelMessageId) return msg;
@@ -971,6 +976,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                 tokens,
                 finishReason: response.finishReason,
                 suggestedQuestions: parsed.questions,
+                groundingMetadata,
               };
             })
           );
@@ -1058,6 +1064,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         if (response.success) {
           const responseText = extractResponseText(response.data);
           const tokens = extractTokenUsage(response.data);
+          const groundingMetadata = extractGroundingMetadata(response.data);
           const parsed = parseFollowUpQuestions(responseText, currentAgent, true);
 
           updateCurrentMessages((prev) =>
@@ -1071,6 +1078,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                     tokens,
                     finishReason: response.finishReason,
                     suggestedQuestions: parsed.questions,
+                    groundingMetadata,
                   }
                 : msg
             )
@@ -1500,6 +1508,78 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                       </div>
                     )}
 
+                    {/* Google Search Grounding Sources / Citations */}
+                    {!isUser && !isStreamingNow && m.groundingMetadata && (
+                      <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2.5">
+                        {/* Search Queries badge if any */}
+                        {m.groundingMetadata.webSearchQueries && m.groundingMetadata.webSearchQueries.length > 0 && (
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="flex items-center gap-1 text-[11px] font-semibold text-blue-600 dark:text-blue-400">
+                              <Search className="w-3 h-3" />
+                              <span>Đã tra cứu Google:</span>
+                            </span>
+                            {m.groundingMetadata.webSearchQueries.map((query, qIdx) => (
+                              <span
+                                key={qIdx}
+                                className="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-900/60 text-[11px] text-blue-700 dark:text-blue-300 font-mono"
+                              >
+                                &ldquo;{query}&rdquo;
+                              </span>
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Grounding web citation chunks */}
+                        {(() => {
+                          const sources = extractGroundingSources(m.groundingMetadata);
+                          if (sources.length === 0) return null;
+                          return (
+                            <div className="space-y-1.5">
+                              <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-700 dark:text-slate-300">
+                                <Globe className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                                <span>Nguồn thông tin & Trích dẫn tham khảo ({sources.length}):</span>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 pt-0.5">
+                                {sources.map((src, sIdx) => {
+                                  let hostname = '';
+                                  try {
+                                    hostname = new URL(src.url).hostname.replace(/^www\./, '');
+                                  } catch {
+                                    hostname = src.url;
+                                  }
+                                  return (
+                                    <a
+                                      key={sIdx}
+                                      href={src.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      title={src.title}
+                                      className="flex items-center justify-between gap-2 p-2 rounded-xl bg-slate-50/80 dark:bg-slate-800/60 hover:bg-emerald-50/80 dark:hover:bg-slate-750 border border-slate-200 dark:border-slate-700/80 hover:border-emerald-300 dark:hover:border-emerald-500 text-slate-700 dark:text-slate-200 text-xs transition-all shadow-2xs group/src cursor-pointer"
+                                    >
+                                      <div className="flex items-center gap-2 min-w-0">
+                                        <div className="w-5 h-5 rounded-md bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center shrink-0 text-emerald-600 dark:text-emerald-400">
+                                          <Globe className="w-3 h-3" />
+                                        </div>
+                                        <div className="min-w-0">
+                                          <p className="font-medium text-xs truncate group-hover/src:text-emerald-700 dark:group-hover/src:text-emerald-300">
+                                            {src.title}
+                                          </p>
+                                          <p className="text-[10px] text-slate-400 truncate font-mono">
+                                            {hostname}
+                                          </p>
+                                        </div>
+                                      </div>
+                                      <ExternalLink className="w-3 h-3 text-slate-400 group-hover/src:text-emerald-600 shrink-0" />
+                                    </a>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          );
+                        })()}
+                      </div>
+                    )}
+
                     {/* Suggested Follow-up Questions */}
                     {!isUser && !isStreamingNow && followUpQuestions.length > 0 && (
                       <div className="mt-3.5 pt-3 border-t border-slate-100 dark:border-slate-800/80">
@@ -1736,6 +1816,28 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
 
+            {/* Google Search Grounding Toggle Button */}
+            <button
+              type="button"
+              onClick={() =>
+                onConfigChange?.({
+                  enableSearchGrounding: !(config.enableSearchGrounding ?? true),
+                })
+              }
+              title={
+                (config.enableSearchGrounding ?? true)
+                  ? '🌐 Tra cứu Web thời gian thực (Google Search: ĐANG BẬT) - Bấm để tắt'
+                  : '🌐 Tra cứu Web qua Google Search (ĐANG TẮT) - Bấm để bật'
+              }
+              className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${
+                (config.enableSearchGrounding ?? true)
+                  ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 ring-1 ring-blue-400/80 shadow-2xs font-medium'
+                  : 'text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800'
+              }`}
+            >
+              <Globe className="w-4 h-4" />
+            </button>
+
             <textarea
               ref={textareaRef}
               value={inputText}
@@ -1785,11 +1887,30 @@ export const ChatTab: React.FC<ChatTabProps> = ({
             )}
           </div>
 
-          <div className={`${containerWidthClass} mx-auto mt-1 flex flex-wrap justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1 gap-1`}>
-            <span className="flex items-center gap-1.5">
-              <Paperclip className="w-3 h-3 text-blue-500" />
-              <span>Dán ảnh <strong className="hidden sm:inline">Ctrl+V</strong>, kéo thả file hoặc bấm 📎 để upload OCR</span>
-            </span>
+          <div className={`${containerWidthClass} mx-auto mt-1 flex flex-wrap items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1 gap-1.5`}>
+            <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() =>
+                  onConfigChange?.({
+                    enableSearchGrounding: !(config.enableSearchGrounding ?? true),
+                  })
+                }
+                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer ${
+                  (config.enableSearchGrounding ?? true)
+                    ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                }`}
+                title="Bấm để bật/tắt Google Search Grounding"
+              >
+                <Globe className="w-2.5 h-2.5" />
+                <span>Google Search: {(config.enableSearchGrounding ?? true) ? 'Bật' : 'Tắt'}</span>
+              </button>
+              <span className="flex items-center gap-1.5">
+                <Paperclip className="w-3 h-3 text-blue-500" />
+                <span>Dán ảnh <strong className="hidden sm:inline">Ctrl+V</strong>, kéo thả file hoặc bấm 📎 để upload OCR</span>
+              </span>
+            </div>
             <div className="hidden sm:flex items-center gap-3">
               <span><strong>↑</strong> điền lại tin nhắn cũ</span>
               <span><strong>Shift+Enter</strong> xuống dòng</span>

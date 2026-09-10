@@ -77,6 +77,16 @@ export const SidebarConfig: React.FC<SidebarConfigProps> = ({ config, onChange }
             <span>Bật Streaming SSE (Sinh từ tức thì)</span>
           </label>
 
+          <label className="flex items-center gap-2 text-xs font-medium text-slate-800 dark:text-slate-200 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={config.enableSearchGrounding ?? true}
+              onChange={(e) => update({ enableSearchGrounding: e.target.checked })}
+              className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0"
+            />
+            <span>🌐 Tra cứu Web (Google Search)</span>
+          </label>
+
           {config.model !== 'gemini-flash-lite-latest' && (
             <button
               onClick={() => update({ model: 'gemini-flash-lite-latest' })}

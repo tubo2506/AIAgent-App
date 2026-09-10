@@ -1,4 +1,4 @@
-import type { ApiConfig, ApiResponseData } from '../types';
+import type { ApiConfig, ApiResponseData, GroundingMetadata, GroundingSource } from '../types';
 
 export function buildEndpointUrl(config: ApiConfig, action = 'generateContent'): string {
   let base: string;
@@ -98,6 +98,15 @@ export function buildPayload(
 
   if (Object.keys(generationConfig).length > 0) {
     payload.generationConfig = generationConfig;
+  }
+
+  // Google Search Grounding: Tra cứu Web thời gian thực
+  if (config.enableSearchGrounding) {
+    payload.tools = [
+      {
+        google_search: {},
+      },
+    ];
   }
 
   return payload;
@@ -312,12 +321,18 @@ export async function sendGeminiStreamingRequest(
     let buffer = '';
     let lastData: any = null;
     let fullRaw = '';
+    let accumulatedGroundingMetadata: any = null;
 
     const processJsonPayload = (jsonStr: string) => {
       if (!jsonStr) return;
       try {
         const parsed = JSON.parse(jsonStr);
         lastData = parsed;
+
+        // Capture groundingMetadata from chunks
+        if (parsed.candidates?.[0]?.groundingMetadata) {
+          accumulatedGroundingMetadata = parsed.candidates[0].groundingMetadata;
+        }
 
         // Check if SSE emitted an error payload
         if (parsed.error) {
@@ -385,6 +400,21 @@ export async function sendGeminiStreamingRequest(
     const totalLatency = Math.round(performance.now() - startTime);
     const finishReason = lastData?.candidates?.[0]?.finishReason;
 
+    if (accumulatedGroundingMetadata) {
+      if (!lastData) {
+        lastData = {
+          candidates: [
+            {
+              content: { parts: [{ text: accumulatedText }] },
+              groundingMetadata: accumulatedGroundingMetadata,
+            },
+          ],
+        };
+      } else if (lastData.candidates?.[0]) {
+        lastData.candidates[0].groundingMetadata = accumulatedGroundingMetadata;
+      }
+    }
+
     return {
       success: true,
       status: response.status,
@@ -448,4 +478,29 @@ export function extractTokenUsage(data: any) {
     candidatesTokens: data.usageMetadata.candidatesTokenCount,
     totalTokens: data.usageMetadata.totalTokenCount,
   };
+}
+
+export function extractGroundingMetadata(data: any): GroundingMetadata | undefined {
+  if (!data?.candidates?.[0]?.groundingMetadata) return undefined;
+  return data.candidates[0].groundingMetadata;
+}
+
+export function extractGroundingSources(metadata?: GroundingMetadata): GroundingSource[] {
+  if (!metadata?.groundingChunks || !Array.isArray(metadata.groundingChunks)) return [];
+  const sources: GroundingSource[] = [];
+  const seenUrls = new Set<string>();
+
+  for (const chunk of metadata.groundingChunks) {
+    if (chunk.web?.uri) {
+      const url = chunk.web.uri;
+      if (!seenUrls.has(url)) {
+        seenUrls.add(url);
+        sources.push({
+          title: chunk.web.title || url,
+          url,
+        });
+      }
+    }
+  }
+  return sources;
 }
