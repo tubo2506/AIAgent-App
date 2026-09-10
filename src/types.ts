@@ -79,6 +79,26 @@ export interface UploadedFile {
   previewUrl: string; // Object URL or data URL for rendering in UI
 }
 
+export interface MessageFeedback {
+  type: 'like' | 'dislike';
+  reason?: string;
+  comment?: string;
+  correctedContent?: string;
+  isGoldenExample?: boolean;
+  updatedAt: string;
+}
+
+export interface GoldenExample {
+  id: string;
+  agentId: string;
+  userQuery: string;
+  originalAnswer: string;
+  finalAnswer: string;
+  rating: 'like' | 'corrected';
+  note?: string;
+  createdAt: string;
+}
+
 export interface ChatMessage {
   id: string;
   role: 'user' | 'model';
@@ -96,6 +116,7 @@ export interface ChatMessage {
   };
   suggestedQuestions?: string[];
   groundingMetadata?: GroundingMetadata;
+  feedback?: MessageFeedback;
 }
 
 export interface RequestHistoryItem {
