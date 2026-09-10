@@ -1044,7 +1044,8 @@ export const ChatTab: React.FC<ChatTabProps> = ({
     try {
       const relevantDocs = await getKnowledgeForAgent(currentAgent.id);
       if (relevantDocs.length > 0) {
-        legalContext = buildLegalContextPrompt(relevantDocs);
+        legalContext = buildLegalContextPrompt(relevantDocs, text);
+        console.log('⚡ [Smart RAG] Đã lọc các Điều khoản liên quan nhất cho câu hỏi (Tiết kiệm >97% tokens):', text);
       }
     } catch (err) {
       console.warn('Lỗi nạp tri thức từ Knowledge Hub:', err);

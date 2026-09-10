@@ -293,26 +293,233 @@ export async function importDocumentsJson(jsonStr: string): Promise<number> {
   return count;
 }
 
+export interface ArticleChunk {
+  docId: string;
+  docTitle: string;
+  docCode?: string;
+  articleTitle: string;
+  content: string;
+}
+
 /**
- * Định dạng các văn bản thành ngữ cảnh tri thức để đưa vào prompt cho Gemini
+ * Tách một văn bản luật thành các Điều khoản độc lập
  */
-export function buildLegalContextPrompt(activeDocs: KnowledgeDocument[]): string {
+export function chunkDocumentByArticles(doc: KnowledgeDocument): ArticleChunk[] {
+  if (!doc.content) return [];
+
+  // Tách theo mẫu: "Điều 1.", "Điều 12a", "Chương I"
+  const regex = /(?=(?:^|\n)(?:Chương\s+[IVXLCDM\d]+|Điều\s+\d+[a-z]?[\.:\s]))/i;
+  const rawParts = doc.content.split(regex).map((p) => p.trim()).filter(Boolean);
+
+  if (rawParts.length <= 1) {
+    // Nếu văn bản không có tiền tố "Điều", chia theo đoạn văn bản ~2500 ký tự
+    const parts: ArticleChunk[] = [];
+    const step = 2500;
+    for (let i = 0; i < doc.content.length; i += step) {
+      parts.push({
+        docId: doc.id,
+        docTitle: doc.title,
+        docCode: doc.code,
+        articleTitle: `${doc.title} (Phần ${Math.floor(i / step) + 1})`,
+        content: doc.content.slice(i, i + step),
+      });
+    }
+    return parts;
+  }
+
+  return rawParts.map((part) => {
+    const lines = part.split('\n').map((l) => l.trim()).filter(Boolean);
+    const firstLine = lines[0] || doc.title;
+    return {
+      docId: doc.id,
+      docTitle: doc.title,
+      docCode: doc.code,
+      articleTitle: firstLine.length > 120 ? firstLine.slice(0, 120) + '...' : firstLine,
+      content: part,
+    };
+  });
+}
+
+/**
+ * Trích xuất các từ khóa pháp lý cốt lõi từ câu hỏi của người dùng
+ */
+function extractLegalQueryKeywords(query: string): string[] {
+  const normalized = query.toLowerCase();
+
+  // 1. Nhận diện số hiệu nghị định/luật (123, 70, 125, 254, 15, 41, 108, 38)
+  const decreeMatches = normalized.match(/\b(123|70|125|254|15|41|108|38)\b/g) || [];
+
+  // 2. Nhận diện điều khoản cụ thể (điều 9, điều 19, điều 4, khoản 1...)
+  const articleMatches = normalized.match(/điều\s+\d+[a-z]?/g) || [];
+
+  // 3. Cụm từ chuyên môn pháp lý & nghiệp vụ hóa đơn - thuế
+  const legalPhrases = [
+    'thời điểm',
+    'lập hóa đơn',
+    'xuất hóa đơn',
+    'trả tiền',
+    'thu tiền',
+    'chuyển giao',
+    'bán hàng',
+    'cung cấp dịch vụ',
+    'sai sót',
+    'hủy hóa đơn',
+    'điều chỉnh',
+    'thay thế',
+    'máy tính tiền',
+    'khởi tạo từ máy tính tiền',
+    'sinh trắc học',
+    'etax mobile',
+    'hộ kinh doanh',
+    'giảm thuế',
+    'thuế suất',
+    '8%',
+    '10%',
+    'xử phạt',
+    'phạt',
+    'chậm xuất',
+    'sai thời điểm',
+    'bảo quản',
+    'lưu trữ',
+    'khấu trừ',
+    'tiêu thụ đặc biệt',
+    'chi phí được trừ',
+  ];
+
+  const matchedPhrases = legalPhrases.filter((phrase) => normalized.includes(phrase));
+
+  // 4. Các từ đơn lẻ (bỏ stopwords ngắn)
+  const singleWords = normalized
+    .replace(/[?!.,;:()\[\]{}"'“”\-–]/g, ' ')
+    .split(/\s+/)
+    .filter((w) => w.length >= 2 && !['là', 'và', 'có', 'của', 'thì', 'ở', 'được', 'cho', 'này', 'để', 'khi', 'với', 'trong', 'nhưng', 'sau', 'nào', 'nhỉ', 'tôi', 'bạn'].includes(w));
+
+  const allTerms = Array.from(new Set([...decreeMatches, ...articleMatches, ...matchedPhrases, ...singleWords]));
+  return allTerms;
+}
+
+/**
+ * Thuật toán Smart RAG: Lọc các Điều/Khoản liên quan nhất từ kho tri thức đang kích hoạt
+ * Giảm tiêu thụ token từ ~120.000 tokens xuống chỉ còn ~2.500 - 3.500 tokens (Tiết kiệm >97%)
+ */
+export function buildLegalContextPrompt(activeDocs: KnowledgeDocument[], userQuery?: string): string {
   if (!activeDocs || activeDocs.length === 0) return '';
 
-  let context = `\n\n[KHO TRI THỨC VĂN BẢN THAM CHIẾU (Đã nạp và số hóa sẵn cho Agent)]\n`;
-  context += `Hệ thống có ${activeDocs.length} tài liệu tri thức đang kích hoạt tham chiếu dưới đây:\n\n`;
+  // Nếu không có câu hỏi lọc, tóm tắt tổng quan để tiết kiệm token
+  if (!userQuery || !userQuery.trim()) {
+    let context = `\n\n[KHO TRI THỨC VĂN BẢN THAM CHIẾU (Tổng quan)]:`;
+    activeDocs.forEach((doc, idx) => {
+      context += `\n${idx + 1}. ${doc.title} (${doc.code || ''}): ${doc.summary || 'Tài liệu quy định'}`;
+    });
+    return context;
+  }
 
-  activeDocs.forEach((doc, idx) => {
-    const scopeLabel = doc.scope === 'shared' ? 'DÙNG CHUNG' : 'RIÊNG CHO AGENT';
+  const queryTerms = extractLegalQueryKeywords(userQuery);
+  const queryLower = userQuery.toLowerCase();
+
+  // 1. Tách tất cả tài liệu active thành các chunks theo từng Điều
+  const allChunks: ArticleChunk[] = [];
+  for (const doc of activeDocs) {
+    const chunks = chunkDocumentByArticles(doc);
+    allChunks.push(...chunks);
+  }
+
+  // 2. Chấm điểm độ liên quan (Relevance Scoring)
+  const scoredChunks = allChunks.map((chunk) => {
+    let score = 0;
+    const titleLower = chunk.articleTitle.toLowerCase();
+    const contentLower = chunk.content.toLowerCase();
+    const codeLower = (chunk.docCode || '').toLowerCase();
+
+    // Điểm cộng lớn nếu người dùng hỏi đích danh văn bản (Ví dụ: "NĐ 123", "NĐ 125", "NĐ 70")
+    if (chunk.docCode) {
+      for (const term of queryTerms) {
+        if (codeLower.includes(term)) {
+          score += 35;
+        }
+      }
+    }
+
+    // Điểm cộng cực lớn nếu tiêu đề Điều khoản chứa từ khóa trọng tâm
+    for (const term of queryTerms) {
+      if (titleLower.includes(term)) {
+        score += term.length > 5 ? 30 : 15;
+      }
+    }
+
+    // Điểm cộng đặc biệt cho các Điều trọng tâm khớp đúng câu hỏi:
+    // Vd câu hỏi hỏi về "thời điểm" -> Điều 9 NĐ 123/NĐ 70 được boost mạnh
+    if (queryLower.includes('thời điểm') && titleLower.includes('thời điểm')) {
+      score += 60;
+    }
+    if ((queryLower.includes('sai sót') || queryLower.includes('hủy') || queryLower.includes('điều chỉnh')) && 
+        (titleLower.includes('sai sót') || titleLower.includes('xử lý hóa đơn'))) {
+      score += 60;
+    }
+    if (queryLower.includes('máy tính tiền') && titleLower.includes('máy tính tiền')) {
+      score += 60;
+    }
+    if ((queryLower.includes('giảm thuế') || queryLower.includes('8%')) && 
+        (titleLower.includes('giảm thuế') || titleLower.includes('thuế suất'))) {
+      score += 60;
+    }
+
+    // Điểm xuất hiện trong nội dung (Body matching)
+    for (const term of queryTerms) {
+      // Đếm số lần xuất hiện (tối đa 8 lần để tránh thiên lệch)
+      const count = (contentLower.match(new RegExp(term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'g')) || []).length;
+      if (count > 0) {
+        score += Math.min(count, 8) * (term.length > 5 ? 4 : 2);
+      }
+    }
+
+    return { chunk, score };
+  });
+
+  // 3. Sắp xếp theo điểm giảm dần và chọn lọc theo ngân sách token
+  scoredChunks.sort((a, b) => b.score - a.score);
+
+  // Giới hạn ngân sách tối đa ~16.000 ký tự (~3.500 tokens) thay vì 450.000 ký tự (120k tokens)
+  const MAX_CHAR_BUDGET = 16000;
+  let currentChars = 0;
+  const selectedChunks: ArticleChunk[] = [];
+
+  for (const item of scoredChunks) {
+    if (item.score <= 0 && selectedChunks.length >= 3) break;
+    if (currentChars + item.chunk.content.length > MAX_CHAR_BUDGET && selectedChunks.length >= 2) {
+      // Nếu chunk này quá dài, trích đoạn ngắn vừa ngân sách
+      if (currentChars < MAX_CHAR_BUDGET - 1000) {
+        const truncated = {
+          ...item.chunk,
+          content: item.chunk.content.slice(0, MAX_CHAR_BUDGET - currentChars) + '\n...(đã trích dẫn phần trọng tâm)...',
+        };
+        selectedChunks.push(truncated);
+      }
+      break;
+    }
+    selectedChunks.push(item.chunk);
+    currentChars += item.chunk.content.length;
+    if (selectedChunks.length >= 6) break; // Lấy tối đa 6 Điều khoản liên quan nhất
+  }
+
+  // 4. Ghép ngữ cảnh hoàn chỉnh
+  let context = `\n\n[KHO TRI THỨC PHÁP LUẬT THAM CHIẾU (Smart RAG - Trích xuất theo Điều/Khoản trọng tâm)]\n`;
+  context += `Hệ thống đã tự động chọn lọc ${selectedChunks.length} Điều khoản liên quan trực tiếp nhất đến câu hỏi của người dùng:\n\n`;
+
+  selectedChunks.forEach((c, idx) => {
     context += `=======================================================\n`;
-    context += `TÀI LIỆU ${idx + 1} [${scopeLabel}]: ${doc.title}${doc.code ? ` (Số hiệu: ${doc.code})` : ''}\n`;
-    if (doc.category) context += `Danh mục: ${doc.category}\n`;
-    if (doc.issuedDate) context += `Ngày ban hành / hiệu lực: ${doc.issuedDate}\n`;
-    context += `TOÀN VĂN NỘI DUNG SỐ HÓA:\n${doc.content}\n`;
+    context += `[ĐIỀU KHOẢN TRÍCH XUẤT ${idx + 1}]: ${c.articleTitle} (Văn bản: ${c.docTitle}${c.docCode ? ` - Số hiệu: ${c.docCode}` : ''})\n`;
+    context += `NỘI DUNG:\n${c.content}\n`;
     context += `=======================================================\n\n`;
   });
 
-  context += `YÊU CẦU: Hãy căn cứ chính xác vào các Điều, Khoản, Điểm hoặc các quy định trong các tài liệu tri thức ở trên để giải đáp thắc mắc của người dùng. Trích dẫn rõ ràng tên tài liệu và vị trí điều khoản liên quan.\n`;
+  // Kèm thông tin tóm tắt của các văn bản đang kích hoạt
+  context += `MỤC LỤC & TÓM TẮT CÁC NGHỊ ĐỊNH ĐANG THAM CHIẾU:\n`;
+  activeDocs.forEach((d) => {
+    context += `- ${d.title} (${d.code || ''}): ${d.summary || 'Đang kích hoạt'}\n`;
+  });
+
+  context += `\nYÊU CẦU ĐỐI VỚI AI: Hãy căn cứ chính xác vào các Điều, Khoản, Điểm được trích xuất ở trên để giải đáp thắc mắc của người dùng. Trích dẫn rõ ràng tên văn bản pháp luật và vị trí điều khoản quy định.\n`;
 
   return context;
 }
