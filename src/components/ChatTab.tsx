@@ -59,6 +59,7 @@ import { FeedbackModal } from './FeedbackModal';
 import { getKnowledgeForAgent, buildLegalContextPrompt, saveDocument } from '../services/legalKnowledgeDb';
 import { saveGoldenExample, formatGoldenExamplesPrompt } from '../services/feedbackStorage';
 import { searchTavily } from '../services/tavilyApi';
+import { detectBestAgent } from '../services/agentRouter';
 
 interface ChatTabProps {
   config: ApiConfig;
@@ -249,6 +250,32 @@ export const ChatTab: React.FC<ChatTabProps> = ({
     userQuery: '',
   });
   const [feedbackToast, setFeedbackToast] = useState<string | null>(null);
+
+  // Smart Auto-Route Agent State (Tự động nhận diện Agent theo ngữ cảnh câu hỏi/ảnh)
+  const [isAutoRouteEnabled, setIsAutoRouteEnabled] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('gemini_studio_auto_route_agent_v1');
+      return saved !== null ? saved === 'true' : true; // Mặc định BẬT
+    } catch {
+      return true;
+    }
+  });
+
+  const handleToggleAutoRoute = () => {
+    setIsAutoRouteEnabled((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('gemini_studio_auto_route_agent_v1', String(next));
+      } catch {}
+      setFeedbackToast(
+        next
+          ? '⚡ Đã BẬT Tự Động Nhận Diện & Điều Phối Agent!'
+          : '🔒 Đã TẮT Tự Động Nhận Diện (Khóa cố định Agent hiện tại).'
+      );
+      setTimeout(() => setFeedbackToast(null), 3000);
+      return next;
+    });
+  };
 
   // Right Control & Inspector Panel state (Desktop default open, closed on mobile to prevent backdrop trap)
   const [isRightPanelOpen, setIsRightPanelOpen] = useState<boolean>(() => {
@@ -1184,10 +1211,24 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       return;
     }
 
-    // 1. Fetch relevant knowledge for current agent (Shared + Agent-specific)
+    // 0. Smart Agent Auto-Routing (Tự động nhận diện và điều phối Agent phù hợp nhất)
+    let activeAgent = currentAgent;
+    if (isAutoRouteEnabled) {
+      const routeResult = detectBestAgent(text, currentAttachments, allAgents, currentAgentId);
+      if (routeResult && routeResult.bestAgent.id !== currentAgentId) {
+        activeAgent = routeResult.bestAgent;
+        handleSelectAgent(routeResult.bestAgent);
+        setFeedbackToast(
+          `✨ Tự động chuyển sang [${routeResult.bestAgent.name} ${routeResult.bestAgent.avatar}] (${routeResult.reason})`
+        );
+        setTimeout(() => setFeedbackToast(null), 3500);
+      }
+    }
+
+    // 1. Fetch relevant knowledge for active agent (Shared + Agent-specific)
     let legalContext = '';
     try {
-      const relevantDocs = await getKnowledgeForAgent(currentAgent.id);
+      const relevantDocs = await getKnowledgeForAgent(activeAgent.id);
       if (relevantDocs.length > 0) {
         legalContext = buildLegalContextPrompt(relevantDocs, text);
         console.log('⚡ [Smart RAG] Đã lọc các Điều khoản liên quan nhất cho câu hỏi (Tiết kiệm >97% tokens):', text);
@@ -1217,10 +1258,10 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       }
     }
 
-    const goldenFewShotPrompt = formatGoldenExamplesPrompt(currentAgent.id, text);
+    const goldenFewShotPrompt = formatGoldenExamplesPrompt(activeAgent.id, text);
 
     const effectiveSystemInstruction = [
-      currentAgent.systemInstruction || config.systemInstruction,
+      activeAgent.systemInstruction || config.systemInstruction,
       legalContext,
       tavilyFormattedContext,
       goldenFewShotPrompt,
@@ -1230,6 +1271,8 @@ export const ChatTab: React.FC<ChatTabProps> = ({
 
     const effectiveConfig: ApiConfig = {
       ...config,
+      model: activeAgent.recommendedModel || config.model,
+      temperature: activeAgent.temperature ?? config.temperature,
       systemInstruction: effectiveSystemInstruction,
     };
 
@@ -1292,7 +1335,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
           updateCurrentMessages((prev) =>
             prev.map((msg) => {
               if (msg.id !== modelMessageId) return msg;
-              const parsed = parseFollowUpQuestions(msg.content, currentAgent, true);
+              const parsed = parseFollowUpQuestions(msg.content, activeAgent, true);
               return {
                 ...msg,
                 status: 'success',
@@ -1397,7 +1440,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               })),
             };
           }
-          const parsed = parseFollowUpQuestions(responseText, currentAgent, true);
+          const parsed = parseFollowUpQuestions(responseText, activeAgent, true);
 
           updateCurrentMessages((prev) =>
             prev.map((msg) =>
@@ -2269,6 +2312,30 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                 <span className="text-[11px] sm:text-xs">Kho Tri Thức</span>
                 <span className="px-1.5 py-0.2 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
                   {agentKnowledgeDocs.length}
+                </span>
+              </button>
+
+              {/* Smart Auto-Route Agent Switch */}
+              <button
+                type="button"
+                onClick={handleToggleAutoRoute}
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs shrink-0 ${
+                  isAutoRouteEnabled
+                    ? 'bg-purple-600 hover:bg-purple-500 text-white shadow-sm ring-2 ring-purple-500/20'
+                    : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
+                }`}
+                title="Bấm để bật/tắt tính năng tự động nhận diện câu hỏi & tài liệu để chuyển sang Agent chuyên môn phù hợp nhất"
+              >
+                <Sparkles className={`w-3.5 h-3.5 ${isAutoRouteEnabled ? 'animate-pulse text-amber-300' : 'text-slate-400'}`} />
+                <span className="text-[11px] sm:text-xs">Tự Nhận Diện Agent</span>
+                <span
+                  className={`px-1.5 py-0.2 rounded text-[9px] sm:text-[10px] font-bold ${
+                    isAutoRouteEnabled
+                      ? 'bg-purple-800 text-white'
+                      : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                  }`}
+                >
+                  {isAutoRouteEnabled ? 'BẬT' : 'TẮT'}
                 </span>
               </button>
 
