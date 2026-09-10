@@ -41,9 +41,9 @@ const PRESET_MODELS = [
   {
     id: 'gemini-3.5-flash-lite',
     name: 'gemini-3.5-flash-lite',
-    badge: '🚀 NHIỀU QUOTA NHẤT (3.5 Flash-Lite)',
+    badge: '⭐ MẶC ĐỊNH - NHIỀU QUOTA NHẤT (3.5 Flash-Lite)',
     badgeColor: 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 border-emerald-300',
-    desc: 'Mô hình tiết kiệm hạn ngạch Free Tier cao nhất (RPM & RPD lớn nhất), tối ưu hóa chi phí và phản hồi siêu nhanh.',
+    desc: 'Mô hình mặc định được khuyên dùng nhất: Tiết kiệm tối đa hạn ngạch Free Tier mỗi ngày (RPM & RPD lớn nhất), hạn chế triệt để lỗi 429 và phản hồi siêu nhanh.',
   },
   {
     id: 'gemini-3.5-flash',
@@ -62,9 +62,9 @@ const PRESET_MODELS = [
   {
     id: 'gemini-3.6-flash',
     name: 'gemini-3.6-flash',
-    badge: '🧠 SUY LUẬN SÂU (Mới nhất)',
-    badgeColor: 'bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 border-blue-300',
-    desc: 'Mô hình tiêu chuẩn thế hệ mới nhất của Google. Tối ưu cho OCR, phân tích tài liệu phức tạp và viết code.',
+    badge: '🧠 SUY LUẬN SÂU (Quota Thấp)',
+    badgeColor: 'bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-300 border-indigo-300',
+    desc: 'Mô hình suy luận thế hệ mới nhất của Google. Tối ưu cho logic phức tạp nhưng giới hạn số request miễn phí mỗi ngày ít hơn.',
   },
   {
     id: 'gemini-2.5-flash',

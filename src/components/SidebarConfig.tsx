@@ -20,10 +20,10 @@ interface SidebarConfigProps {
 }
 
 const PRESET_MODELS = [
-  { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash', note: '⚡ Gemini 3.5 Flash (Mặc định)' },
-  { id: 'gemini-3.5-flash-lite', name: 'gemini-3.5-flash-lite', note: '⚡ Bản 3.5 Lite (Tốc độ cao)' },
+  { id: 'gemini-3.5-flash-lite', name: 'gemini-3.5-flash-lite', note: '⚡ Gemini 3.5 Flash-Lite (Mặc định - Quota cao nhất)' },
+  { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash', note: '⚡ Gemini 3.5 Flash (Cân bằng)' },
   { id: 'gemini-flash-lite-latest', name: 'gemini-flash-lite-latest', note: '⚡ SIÊU NHANH (~1s, Trả lời tức thì)' },
-  { id: 'gemini-3.6-flash', name: 'gemini-3.6-flash', note: 'Model chuẩn mới nhất (Suy luận sâu)' },
+  { id: 'gemini-3.6-flash', name: 'gemini-3.6-flash', note: 'Model chuẩn mới nhất (Suy luận sâu / Quota ít)' },
   { id: 'gemini-3-flash', name: 'gemini-3-flash', note: 'Tên model trong cURL của bạn' },
   { id: 'gemini-2.5-flash', name: 'gemini-2.5-flash', note: 'Bản 2.5 Flash' },
   { id: 'gemini-2.5-pro', name: 'gemini-2.5-pro', note: 'Bản 2.5 Pro cao cấp' },

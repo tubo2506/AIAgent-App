@@ -24,7 +24,7 @@ const PRESETS = [
     description: 'Tư vấn pháp luật về thời điểm xuất hóa đơn khi khách hàng trả tiền chậm sang tháng sau, tránh mức phạt NĐ 125/2020 và tối ưu công nợ.',
     prompt:
       'Tình huống thực tế cho chủ doanh nghiệp: Doanh nghiệp của tôi bán lô hàng trị giá 150 triệu đồng đã giao hàng và lập biên bản bàn giao nghiệm thu ngày 25/08, nhưng theo hợp đồng đối tác sẽ thanh toán vào ngày 10/09 (tháng sau). Kế toán muốn chờ tiền về tài khoản mới xuất hóa đơn điện tử. Xin chuyên gia và luật sư tư vấn:\n1. Kế toán làm vậy có vi phạm quy định về thời điểm lập hóa đơn không?\n2. Mức phạt tiền theo Nghị định 125/2020/NĐ-CP là bao nhiêu?\n3. Có giải pháp nào vừa tuân thủ 100% pháp luật, vừa có lợi nhất cho quản lý dòng tiền và công nợ của doanh nghiệp?\nTrích dẫn đầy đủ điều, khoản tại Nghị định 123/2020/NĐ-CP, Thông tư 78/2021/TT-BTC và Nghị định 125/2020/NĐ-CP để đối chiếu.',
-    config: { model: 'gemini-3.6-flash', streaming: true, temperature: 0.1 },
+    config: { model: 'gemini-3.5-flash-lite', streaming: true, temperature: 0.1 },
   },
   {
     id: 'legal_invoice_errors',
@@ -35,7 +35,7 @@ const PRESETS = [
     description: 'Tư vấn lựa chọn lập Hóa đơn Điều chỉnh hay Hóa đơn Thay thế khi phát hiện sai đơn giá/thành tiền theo Điều 19 NĐ 123 và TT 78.',
     prompt:
       'Tình huống: Doanh nghiệp tôi đã xuất hóa đơn điện tử có mã của cơ quan thuế gửi cho khách hàng, sau đó phát hiện bị sai đơn giá và thành tiền (tăng thêm 20 triệu đồng). Xin chuyên gia tư vấn chi tiết:\n1. Trường hợp này nên chọn lập Hóa đơn Điều chỉnh hay Hóa đơn Thay thế thì thuận tiện và an toàn nhất cho cả người bán lẫn người mua?\n2. Có bắt buộc phải lập biên bản thỏa thuận giữa hai bên không?\n3. Thủ tục gửi Mẫu 04/SS-HĐĐT lên cơ quan thuế được quy định như thế nào?\nTrích dẫn rõ Điều, Khoản cụ thể tại Nghị định 123/2020/NĐ-CP và Thông tư 78/2021/TT-BTC.',
-    config: { model: 'gemini-3.6-flash', streaming: true, temperature: 0.1 },
+    config: { model: 'gemini-3.5-flash-lite', streaming: true, temperature: 0.1 },
   },
   {
     id: 'ocr_doc',

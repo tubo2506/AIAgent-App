@@ -34,10 +34,10 @@ interface AgentSelectorModalProps {
 const PRESET_EMOJIS = ['🤖', '💻', '📑', '🇻🇳', '🧠', '📊', '⚡', '🎨', '🔬', '🛡️', '📚', '✍️', '💼', '🚀'];
 
 const PRESET_MODELS = [
-  { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash (Gemini 3.5 Flash - Mặc định)' },
+  { id: 'gemini-3.5-flash-lite', name: 'gemini-3.5-flash-lite (Mặc định - Quota cao nhất)' },
+  { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash (Cân bằng tốc độ & thông minh)' },
   { id: 'gemini-flash-lite-latest', name: 'gemini-flash-lite-latest (Siêu Tốc ~1s)' },
-  { id: 'gemini-3.6-flash', name: 'gemini-3.6-flash (Tiêu chuẩn / Suy luận sâu)' },
-  { id: 'gemini-3.5-flash-lite', name: 'gemini-3.5-flash-lite' },
+  { id: 'gemini-3.6-flash', name: 'gemini-3.6-flash (Mới nhất / Quota ít)' },
   { id: 'gemini-2.5-flash', name: 'gemini-2.5-flash' },
   { id: 'gemini-2.5-pro', name: 'gemini-2.5-pro' },
 ];

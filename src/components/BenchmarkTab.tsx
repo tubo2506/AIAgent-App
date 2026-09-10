@@ -75,10 +75,10 @@ const BENCHMARK_SUITES = [
 ];
 
 const COMPARISON_MODELS = [
-  { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash (Gemini 3.5 Flash)' },
+  { id: 'gemini-3.5-flash-lite', name: 'gemini-3.5-flash-lite (Mặc định - Quota cao nhất)' },
+  { id: 'gemini-3.5-flash', name: 'gemini-3.5-flash (Cân bằng)' },
   { id: 'gemini-flash-lite-latest', name: 'gemini-flash-lite-latest (Siêu Tốc)' },
-  { id: 'gemini-3.6-flash', name: 'gemini-3.6-flash (Mới Nhất / Suy Luận)' },
-  { id: 'gemini-3.5-flash-lite', name: 'gemini-3.5-flash-lite' },
+  { id: 'gemini-3.6-flash', name: 'gemini-3.6-flash (Suy Luận Sâu / Quota ít)' },
   { id: 'gemini-2.5-flash', name: 'gemini-2.5-flash' },
 ];
 
