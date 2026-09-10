@@ -1,7 +1,7 @@
 /**
- * Tavily AI Search API Service
+ * Tavily AI Search API Service (With Smart 7-Day Query Caching)
  * Cung cấp khả năng tìm kiếm web thời gian thực tối ưu cho LLM / AI Agent
- * Đăng ký miễn phí 1.000 lượt/tháng không cần thẻ tín dụng tại: https://tavily.com
+ * Tích hợp bộ nhớ đệm (Query Cache) tự động để tiết kiệm tối đa hạn ngạch 1.000 lượt
  */
 
 export interface TavilySearchResult {
@@ -17,6 +17,83 @@ export interface TavilySearchOutput {
   results: TavilySearchResult[];
   formattedContext: string;
   sources: Array<{ title: string; url: string }>;
+  isFromCache?: boolean;
+}
+
+const STORAGE_CACHE_KEY = 'gemini_tavily_search_cache_v1';
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // Lưu cache 7 ngày (168 giờ)
+
+/**
+ * Chuẩn hóa câu truy vấn để tăng tỷ lệ trúng cache
+ */
+function normalizeQuery(q: string): string {
+  return q
+    .toLowerCase()
+    .replace(/[?!.,;:()\[\]{}"'“”]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+/**
+ * Lấy kết quả tìm kiếm từ Cache cục bộ
+ */
+function getCachedSearch(query: string): TavilySearchOutput | null {
+  try {
+    const raw = localStorage.getItem(STORAGE_CACHE_KEY);
+    if (!raw) return null;
+
+    const cache: Record<string, { timestamp: number; output: TavilySearchOutput }> = JSON.parse(raw);
+    const key = normalizeQuery(query);
+    const entry = cache[key];
+
+    if (!entry) return null;
+
+    // Kiểm tra hết hạn TTL (7 ngày)
+    if (Date.now() - entry.timestamp > CACHE_TTL_MS) {
+      delete cache[key];
+      localStorage.setItem(STORAGE_CACHE_KEY, JSON.stringify(cache));
+      return null;
+    }
+
+    return entry.output;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Lưu kết quả tìm kiếm vào Cache cục bộ
+ */
+function setCachedSearch(query: string, output: TavilySearchOutput): void {
+  try {
+    const raw = localStorage.getItem(STORAGE_CACHE_KEY);
+    const cache: Record<string, { timestamp: number; output: TavilySearchOutput }> = raw ? JSON.parse(raw) : {};
+    const key = normalizeQuery(query);
+
+    // Giữ tối đa 100 câu truy vấn gần nhất để không tràn localStorage
+    const keys = Object.keys(cache);
+    if (keys.length > 100) {
+      delete cache[keys[0]];
+    }
+
+    cache[key] = {
+      timestamp: Date.now(),
+      output,
+    };
+
+    localStorage.setItem(STORAGE_CACHE_KEY, JSON.stringify(cache));
+  } catch (err) {
+    console.warn('Không thể lưu cache Tavily vào localStorage:', err);
+  }
+}
+
+/**
+ * Xóa toàn bộ bộ nhớ đệm tìm kiếm
+ */
+export function clearTavilyCache(): void {
+  try {
+    localStorage.removeItem(STORAGE_CACHE_KEY);
+  } catch {}
 }
 
 /**
@@ -54,15 +131,27 @@ export async function testTavilyConnection(apiKey: string): Promise<{ success: b
 }
 
 /**
- * Thực hiện tìm kiếm web thời gian thực với Tavily AI Search
+ * Thực hiện tìm kiếm web thời gian thực với Tavily AI Search (Tự động đọc Cache)
  */
 export async function searchTavily(
   query: string,
   apiKey: string,
-  options?: { maxResults?: number; searchDepth?: 'basic' | 'advanced' }
+  options?: { maxResults?: number; searchDepth?: 'basic' | 'advanced'; bypassCache?: boolean }
 ): Promise<TavilySearchOutput> {
   if (!apiKey || !apiKey.trim()) {
     throw new Error('Chưa cấu hình Tavily API Key. Vui lòng vào Cài đặt để nhập Key miễn phí.');
+  }
+
+  // 1. Kiểm tra Cache trước (Tiết kiệm 100% request nếu đã tìm trước đó trong 7 ngày)
+  if (!options?.bypassCache) {
+    const cached = getCachedSearch(query);
+    if (cached) {
+      console.log('⚡ [Tavily Cache Hit] Phản hồi tức thì từ bộ nhớ đệm (0 tốn request Tavily):', query);
+      return {
+        ...cached,
+        isFromCache: true,
+      };
+    }
   }
 
   const maxResults = options?.maxResults || 5;
@@ -118,11 +207,17 @@ export async function searchTavily(
 
   formattedContext += `HÃY SỬ DỤNG DỮ LIỆU TÌM KIẾM MỚI NHẤT TRÊN ĐỂ TRẢ LỜI CÂU HỎI CỦA NGƯỜI DÙNG VÀ TRÍCH DẪN RÕ RÀNG NGUỒN CUNG CẤP THÔNG TIN.\n`;
 
-  return {
+  const output: TavilySearchOutput = {
     query,
     answer: data.answer,
     results,
     formattedContext,
     sources,
+    isFromCache: false,
   };
+
+  // Lưu vào Cache cho các lần hỏi sau
+  setCachedSearch(query, output);
+
+  return output;
 }

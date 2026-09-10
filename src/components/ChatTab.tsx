@@ -35,6 +35,7 @@ import {
   Globe,
   ExternalLink,
   BookOpen,
+  BookmarkPlus,
 } from './icons';
 import type { ApiConfig, ChatMessage, RequestHistoryItem, UploadedFile, Agent, ChatSession, KnowledgeDocument } from '../types';
 import {
@@ -52,7 +53,7 @@ import { BUILT_IN_AGENTS } from '../data/defaultAgents';
 import { AgentSelectorModal } from './AgentSelectorModal';
 import { ChatSessionsDrawer } from './ChatSessionsDrawer';
 import { KnowledgeHubModal } from './KnowledgeHubModal';
-import { getKnowledgeForAgent, buildLegalContextPrompt } from '../services/legalKnowledgeDb';
+import { getKnowledgeForAgent, buildLegalContextPrompt, saveDocument } from '../services/legalKnowledgeDb';
 import { searchTavily } from '../services/tavilyApi';
 
 interface ChatTabProps {
@@ -82,6 +83,40 @@ const STORAGE_RIGHT_PANEL_KEY = 'gemini_studio_right_panel_open_v1';
 const LEGACY_STORAGE_CHAT_KEY = 'gemini_studio_chat_messages_v1';
 
 export type ChatWidthMode = 'wide' | 'full' | 'compact';
+
+/**
+ * Tự động phát hiện câu hỏi tiếp nối (follow-up) để tiết kiệm lượt gọi Tavily
+ */
+function isConversationalFollowUp(text: string, currentMessages: ChatMessage[]): boolean {
+  if (!text || currentMessages.length < 2) return false;
+
+  const clean = text.toLowerCase().trim();
+
+  // 1. Các mẫu câu hỏi tiếp nối / làm rõ điển hình
+  const followUpPatterns = [
+    /^(hãy|vui lòng|bạn hãy|xin hãy)?\s*(giải thích|phân tích|nói rõ|làm rõ|nêu rõ|nêu chi tiết|chi tiết hơn)/i,
+    /^(cho|hãy cho)\s*(ví dụ|ví dụ cụ thể|minh họa)/i,
+    /^(tóm tắt|tóm lại|tổng hợp lại|rút gọn)/i,
+    /^(vậy|thế|còn|thế còn|vậy thì|như vậy|theo đó)\s/i,
+    /^(điều\s+\d+|khoản\s+\d+|điểm\s+[a-zđ]|mục\s+\d+|chương\s+[ivx\d]+)/i,
+    /^(mức phạt|hình phạt|chế tài|thời hạn|thủ tục|hồ sơ|điều kiện)\s*(là gì|như thế nào|bao nhiêu)/i,
+    /^(ai là|cơ quan nào|khi nào|bao giờ|áp dụng từ|áp dụng cho ai)/i,
+    /^(tại sao|vì sao|lý do|nguyên nhân)/i,
+    /^(tiếp tục|nói tiếp|nêu tiếp)/i,
+  ];
+
+  if (followUpPatterns.some((p) => p.test(clean))) {
+    return true;
+  }
+
+  // 2. Câu hỏi ngắn (< 35 ký tự) và không chứa từ khóa mở văn bản mới độc lập
+  const hasNewDocumentKeywords = /(nghị định|thông tư|luật số|quyết định|dự thảo|năm 202)/i.test(clean);
+  if (clean.length < 35 && !hasNewDocumentKeywords) {
+    return true;
+  }
+
+  return false;
+}
 
 export const ChatTab: React.FC<ChatTabProps> = ({
   config,
@@ -268,6 +303,59 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   useEffect(() => {
     refreshActiveKnowledge(currentAgentId);
   }, [currentAgentId]);
+
+  // 1-Click Save to Knowledge Hub State & Handler
+  const [savedKnowledgeMsgIds, setSavedKnowledgeMsgIds] = useState<Set<string>>(new Set());
+
+  const handleSaveMessageToKnowledge = async (message: ChatMessage) => {
+    if (savedKnowledgeMsgIds.has(message.id)) return;
+
+    // 1. Tự động trích xuất mã văn bản (ví dụ: 70/2025/NĐ-CP hoặc 123/2020/NĐ-CP)
+    const codeMatch = message.content.match(/\b\d{1,4}\/\d{4}\/[A-ZĐa-z-]+/);
+    const docCode = codeMatch ? codeMatch[0] : undefined;
+
+    // 2. Tự động đặt tiêu đề thông minh
+    let title = '';
+    const decreeMatch = message.content.match(/(Nghị định|Thông tư|Quyết định|Luật)\s+[\d\w\/\.-]+/i);
+    if (decreeMatch) {
+      title = decreeMatch[0];
+    } else if (message.groundingMetadata?.webSearchQueries?.[0]) {
+      title = message.groundingMetadata.webSearchQueries[0];
+    } else {
+      title = 'Tài liệu tra cứu: ' + (currentAgent.name || 'Pháp luật');
+    }
+
+    // 3. Trích xuất nguồn link
+    const sources = extractGroundingSources(message.groundingMetadata);
+    let sourcesText = '';
+    if (sources.length > 0) {
+      sourcesText = '\n\n### Nguồn tham khảo chính thức:\n' + sources.map((s) => `- [${s.title}](${s.url})`).join('\n');
+    }
+
+    const newDoc: KnowledgeDocument = {
+      id: 'doc_web_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6),
+      title: title.charAt(0).toUpperCase() + title.slice(1),
+      code: docCode,
+      scope: 'agent', // Gán riêng cho Agent đang thảo luận
+      assignedAgentIds: [currentAgentId],
+      category: currentAgentId === 'legal-advisor' ? 'Pháp luật & Thuế' : 'Tài liệu chung',
+      originalFileName: 'Tra cứu Web (Tavily AI Search)',
+      originalSize: new Blob([message.content]).size * 4,
+      compressedSize: new Blob([message.content + sourcesText]).size,
+      content: message.content + sourcesText,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    try {
+      await saveDocument(newDoc);
+      setSavedKnowledgeMsgIds((prev) => new Set([...prev, message.id]));
+      await refreshActiveKnowledge(currentAgentId);
+      alert(`🎉 Đã lưu thành công "${newDoc.title}" vào Kho Tri Thức của Agent "${currentAgent.name}"!\n\nLần sau bạn có thể tắt Tra cứu Web mà AI vẫn nhớ và trả lời chuẩn xác.`);
+    } catch (err: any) {
+      alert('Lỗi lưu vào Kho Tri Thức: ' + (err.message || err));
+    }
+  };
 
   // Web Search Toggle with Smart Guidance for Tavily Key
   const handleToggleWebSearch = () => {
@@ -967,12 +1055,18 @@ export const ChatTab: React.FC<ChatTabProps> = ({
     let tavilySources: Array<{ title: string; url: string }> = [];
     if (config.enableSearchGrounding && (config.searchProvider || 'tavily') === 'tavily') {
       if (config.tavilyApiKey && config.tavilyApiKey.trim() && text) {
-        try {
-          const tavilyRes = await searchTavily(text, config.tavilyApiKey);
-          tavilyFormattedContext = tavilyRes.formattedContext;
-          tavilySources = tavilyRes.sources;
-        } catch (tavilyErr: any) {
-          console.warn('Tavily search failed:', tavilyErr);
+        // Tự động kiểm tra xem có phải câu hỏi tiếp nối ngữ cảnh không để tiết kiệm request
+        const isFollowUp = isConversationalFollowUp(text, messages);
+        if (isFollowUp) {
+          console.log('🧠 [Smart Follow-up Skip] Phát hiện câu hỏi tiếp nối ngữ cảnh, bỏ qua gọi Tavily để tiết kiệm request:', text);
+        } else {
+          try {
+            const tavilyRes = await searchTavily(text, config.tavilyApiKey);
+            tavilyFormattedContext = tavilyRes.formattedContext;
+            tavilySources = tavilyRes.sources;
+          } catch (tavilyErr: any) {
+            console.warn('Tavily search failed:', tavilyErr);
+          }
         }
       }
     }
@@ -1666,6 +1760,35 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                             </div>
                           );
                         })()}
+
+                        {/* 1-Click Save to Knowledge Hub */}
+                        <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-t border-slate-100 dark:border-slate-800/80">
+                          <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                            💡 Lưu văn bản/tri thức này vào Agent để các lần hỏi tiếp theo không tốn lượt tìm kiếm Tavily.
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleSaveMessageToKnowledge(m)}
+                            disabled={savedKnowledgeMsgIds.has(m.id)}
+                            className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium transition-all shrink-0 cursor-pointer ${
+                              savedKnowledgeMsgIds.has(m.id)
+                                ? 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 cursor-default'
+                                : 'bg-blue-50 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-2xs hover:shadow-xs'
+                            }`}
+                          >
+                            {savedKnowledgeMsgIds.has(m.id) ? (
+                              <>
+                                <Check className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                <span>Đã lưu vào Kho Tri Thức</span>
+                              </>
+                            ) : (
+                              <>
+                                <BookmarkPlus className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                                <span>Lưu vào Kho Tri Thức</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
                       </div>
                     )}
 
