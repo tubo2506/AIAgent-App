@@ -38,6 +38,7 @@ import {
   BookmarkPlus,
   ThumbsUp,
   ThumbsDown,
+  Cloud,
 } from './icons';
 import type { ApiConfig, ChatMessage, RequestHistoryItem, UploadedFile, Agent, ChatSession, KnowledgeDocument } from '../types';
 import {
@@ -56,10 +57,21 @@ import { AgentSelectorModal } from './AgentSelectorModal';
 import { ChatSessionsDrawer } from './ChatSessionsDrawer';
 import { KnowledgeHubModal } from './KnowledgeHubModal';
 import { FeedbackModal } from './FeedbackModal';
+import { CloudSyncModal } from './CloudSyncModal';
 import { getKnowledgeForAgent, buildLegalContextPrompt, saveDocument } from '../services/legalKnowledgeDb';
-import { saveGoldenExample, formatGoldenExamplesPrompt } from '../services/feedbackStorage';
+import { saveGoldenExample, formatGoldenExamplesPrompt, getGoldenExamples } from '../services/feedbackStorage';
 import { searchTavily } from '../services/tavilyApi';
 import { detectBestAgent } from '../services/agentRouter';
+import {
+  onAuthChange,
+  signInAnonymouslyUser,
+  syncAllSessionsToCloud,
+  loadSessionsFromCloud,
+  syncAllGoldenExamplesToCloud,
+  syncAllCustomAgentsToCloud,
+  loadCustomAgentsFromCloud,
+} from '../services/cloudSyncService';
+import type { User as FirebaseUser } from 'firebase/auth';
 
 interface ChatTabProps {
   config: ApiConfig;
@@ -276,6 +288,80 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       return next;
     });
   };
+
+  // Cloud Firestore Sync State
+  const [currentUser, setCurrentUser] = useState<FirebaseUser | null>(null);
+  const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
+  const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+
+  const handleTriggerCloudSync = async () => {
+    if (!currentUser) return;
+    setIsSyncingCloud(true);
+    try {
+      // 1. Sync Sessions to Cloud
+      await syncAllSessionsToCloud(currentUser.uid, sessions);
+
+      // 2. Load Cloud Sessions and Merge
+      const cloudSessions = await loadSessionsFromCloud(currentUser.uid);
+      if (cloudSessions.length > 0) {
+        setSessions((prev) => {
+          const map = new Map<string, ChatSession>();
+          cloudSessions.forEach((s) => map.set(s.id, s));
+          prev.forEach((s) => {
+            if (!map.has(s.id) || new Date(s.updatedAt) > new Date(map.get(s.id)!.updatedAt)) {
+              map.set(s.id, s);
+            }
+          });
+          return Array.from(map.values()).sort(
+            (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
+          );
+        });
+      }
+
+      // 3. Sync Golden Examples
+      const localGoldens = getGoldenExamples();
+      await syncAllGoldenExamplesToCloud(currentUser.uid, localGoldens);
+
+      // 4. Sync Custom Agents
+      await syncAllCustomAgentsToCloud(currentUser.uid, customAgents);
+      const cloudAgents = await loadCustomAgentsFromCloud(currentUser.uid);
+      if (cloudAgents.length > 0) {
+        setCustomAgents((prev) => {
+          const ids = new Set(prev.map((a) => a.id));
+          const newFromCloud = cloudAgents.filter((a) => !ids.has(a.id));
+          return [...prev, ...newFromCloud];
+        });
+      }
+
+      setFeedbackToast('☁️ Đã đồng bộ với Cloud Firestore thành công!');
+      setTimeout(() => setFeedbackToast(null), 3000);
+    } catch (err) {
+      console.warn('Lỗi đồng bộ Cloud:', err);
+    } finally {
+      setIsSyncingCloud(false);
+    }
+  };
+
+  // Listen to Firebase Auth state
+  useEffect(() => {
+    const unsubscribe = onAuthChange(async (user) => {
+      setCurrentUser(user);
+      if (user) {
+        // Auto pull cloud data on login
+        setTimeout(() => {
+          handleTriggerCloudSync();
+        }, 300);
+      } else {
+        // Auto sign in as guest if not logged in
+        try {
+          await signInAnonymouslyUser();
+        } catch {
+          // Ignore offline error
+        }
+      }
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Right Control & Inspector Panel state (Desktop default open, closed on mobile to prevent backdrop trap)
   const [isRightPanelOpen, setIsRightPanelOpen] = useState<boolean>(() => {
@@ -1654,6 +1740,23 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               </button>
             )}
 
+            {/* Cloud Sync Button */}
+            <button
+              type="button"
+              onClick={() => setIsCloudModalOpen(true)}
+              className={`flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border transition-all cursor-pointer shadow-2xs ${
+                currentUser && !currentUser.isAnonymous
+                  ? 'bg-emerald-50 text-emerald-700 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800'
+                  : 'bg-white text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700 hover:bg-slate-50'
+              }`}
+              title="Đồng bộ Đám mây (Cloud Firestore)"
+            >
+              <Cloud className={`w-3.5 h-3.5 ${isSyncingCloud ? 'animate-bounce text-blue-500' : currentUser && !currentUser.isAnonymous ? 'text-emerald-600' : 'text-slate-400'}`} />
+              <span className="hidden sm:inline">
+                {currentUser && !currentUser.isAnonymous ? 'Đã liên kết Cloud' : 'Đồng Bộ Cloud'}
+              </span>
+            </button>
+
             {/* Quick Search Toggle */}
             <button
               onClick={() => {
@@ -2795,6 +2898,18 @@ export const ChatTab: React.FC<ChatTabProps> = ({
           onSaveFeedback={handleSaveFeedbackFromModal}
         />
       )}
+
+      {/* 7. Cloud Sync Modal (Firebase Cloud Firestore) */}
+      <CloudSyncModal
+        isOpen={isCloudModalOpen}
+        onClose={() => setIsCloudModalOpen(false)}
+        currentUser={currentUser}
+        isSyncing={isSyncingCloud}
+        onTriggerSync={handleTriggerCloudSync}
+        sessionsCount={sessions.length}
+        goldenCount={getGoldenExamples().length}
+        customAgentsCount={customAgents.length}
+      />
     </div>
   );
 };
