@@ -88,6 +88,8 @@ export const MarkdownRenderer: React.FC<MarkdownRendererProps> = ({
         let parsedHtml = '';
         try {
           parsedHtml = marked.parse(cleanedText, { breaks: true, gfm: true }) as string;
+          // Ensure all links open safely in a new tab without interrupting chat
+          parsedHtml = parsedHtml.replace(/<a\s+(?:[^>]*?\s+)?href=/gi, '<a target="_blank" rel="noopener noreferrer" href=');
         } catch {
           parsedHtml = cleanedText;
         }

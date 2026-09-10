@@ -572,7 +572,16 @@ export function buildLegalContextPrompt(activeDocs: KnowledgeDocument[], userQue
    - TUYỆT ĐỐI CẤM TỰ BỊA ĐẶT số hiệu Thông tư nào khác (ví dụ: "Thông tư 91/2026/TT-BTC" HOÀN TOÀN KHÔNG TỒN TẠI, CẤM TRÍCH DẪN). Hướng dẫn về xử lý hóa đơn sai sót vẫn là Thông tư 78/2021/TT-BTC.
    - Khi đối chiếu văn bản mới: Nếu người dùng hỏi các Nghị định mới (Nghị định 70/2025/NĐ-CP, Nghị định 254/2026/NĐ-CP) có sửa đổi quy trình xử lý hóa đơn sai sót hay không, hãy trả lời chính xác:
      + Bản chất quy trình kỹ thuật (quyền chọn Hóa đơn điều chỉnh hay Thay thế, gửi Mẫu 04/SS-HĐĐT) vẫn kế thừa thống nhất theo Điều 19 Nghị định 123/2020/NĐ-CP và Thông tư 78/2021/TT-BTC.
-     + Các điểm mới trong Nghị định 70/2025 và Nghị định 254/2026 (NĐ_254_2026_Hoa don) tập trung vào chuẩn hóa tự động hóa qua Cổng thông tin điện tử Tổng cục Thuế, kết nối hóa đơn máy tính tiền, xác thực sinh trắc học và kiểm soát dữ liệu điện tử.`;
+     + Các điểm mới trong Nghị định 70/2025 và Nghị định 254/2026 (NĐ_254_2026_Hoa don) tập trung vào chuẩn hóa tự động hóa qua Cổng thông tin điện tử Tổng cục Thuế, kết nối hóa đơn máy tính tiền, xác thực sinh trắc học và kiểm soát dữ liệu điện tử.
+
+3. QUY TẮC DẪN CHIẾU TÀI LIỆU GỐC ĐỂ USER ĐỐI CHIẾU (BẮT BUỘC Ở MỖI DÒNG / LUẬN ĐIỂM):
+   - Mọi quy định, thời điểm, mức phạt, điều kiện bắt buộc phải kèm link tham chiếu văn bản gốc:
+     * NĐ 70/2025/NĐ-CP: [📄 Căn cứ: NĐ 70/2025/NĐ-CP - Điều X Khoản Y](/documents/ND_70_2025_ND-CP.pdf)
+     * NĐ 123/2020/NĐ-CP: [📄 Căn cứ: NĐ 123/2020/NĐ-CP - Điều X Khoản Y](/documents/ND_123_2020_ND-CP.doc)
+     * NĐ 254/2026/NĐ-CP: [📄 Căn cứ: NĐ 254/2026/NĐ-CP - Điều X Khoản Y](/documents/ND_254_2026_ND-CP.pdf)
+     * NĐ 15/2022/NĐ-CP: [📄 Căn cứ: NĐ 15/2022/NĐ-CP - Điều X](/documents/ND_15_2022_ND-CP.pdf)
+     * NĐ 41/2022/NĐ-CP: [📄 Căn cứ: NĐ 41/2022/NĐ-CP - Điều X](/documents/ND_41_2022_ND-CP.pdf)
+   - Người dùng sẽ bấm trực tiếp vào các liên kết này để mở file gốc kiểm tra.`;
 
   return context;
 }

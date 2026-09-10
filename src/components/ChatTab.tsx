@@ -40,6 +40,7 @@ import {
   ThumbsDown,
   Cloud,
   Zap,
+  Eye,
 } from './icons';
 import type { ApiConfig, ChatMessage, RequestHistoryItem, UploadedFile, Agent, ChatSession, KnowledgeDocument } from '../types';
 import {
@@ -59,6 +60,8 @@ import { ChatSessionsDrawer } from './ChatSessionsDrawer';
 import { KnowledgeHubModal } from './KnowledgeHubModal';
 import { FeedbackModal } from './FeedbackModal';
 import { CloudSyncModal } from './CloudSyncModal';
+import { ReferenceDocumentsModal } from './ReferenceDocumentsModal';
+import { detectReferencedDocuments } from '../data/referenceDocuments';
 import { getKnowledgeForAgent, buildLegalContextPrompt, saveDocument } from '../services/legalKnowledgeDb';
 import { saveGoldenExample, formatGoldenExamplesPrompt, getGoldenExamples } from '../services/feedbackStorage';
 import { searchTavily } from '../services/tavilyApi';
@@ -443,6 +446,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
 
   // Knowledge Hub Modal & Dynamic Agent Knowledge State
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [isRefDocsModalOpen, setIsRefDocsModalOpen] = useState(false);
   const [agentKnowledgeDocs, setAgentKnowledgeDocs] = useState<KnowledgeDocument[]>([]);
 
   const refreshActiveKnowledge = async (agentId?: string) => {
@@ -1793,6 +1797,17 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               </button>
             )}
 
+            {/* Official Reference Documents Button */}
+            <button
+              type="button"
+              onClick={() => setIsRefDocsModalOpen(true)}
+              className="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-lg border border-blue-200 dark:border-blue-800 bg-blue-50/70 hover:bg-blue-100 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 transition-all cursor-pointer shadow-2xs"
+              title="Mở Thư Viện Văn Bản Gốc Tra Cứu & Đối Chiếu Căn Cứ Pháp Lý (PDF/Doc)"
+            >
+              <BookOpen className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span className="hidden md:inline">Văn Bản Gốc (5)</span>
+            </button>
+
             {/* Cloud Sync Button */}
             <button
               type="button"
@@ -2114,6 +2129,72 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                                     </a>
                                   );
                                 })}
+                              </div>
+                            </div>
+                          );
+                        })()}
+
+                        {/* Official Legal Reference Documents Grounding */}
+                        {(() => {
+                          if (m.role !== 'model') return null;
+                          const referencedDocs = detectReferencedDocuments(m.content);
+                          if (referencedDocs.length === 0) return null;
+                          return (
+                            <div className="p-2.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/80 dark:border-blue-800/80 space-y-2">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-1.5 text-xs font-bold text-blue-900 dark:text-blue-200">
+                                  <FileText className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                                  <span>Căn cứ văn bản gốc đối chiếu trong câu trả lời ({referencedDocs.length}):</span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => setIsRefDocsModalOpen(true)}
+                                  className="text-[10px] text-blue-600 dark:text-blue-400 font-medium hover:underline cursor-pointer"
+                                >
+                                  Mở toàn bộ thư viện &gt;
+                                </button>
+                              </div>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                                {referencedDocs.map((doc) => (
+                                  <div
+                                    key={doc.id}
+                                    className="flex items-center justify-between gap-2 p-2 rounded-lg bg-white dark:bg-slate-900 border border-blue-100 dark:border-slate-800 shadow-2xs hover:border-blue-300 transition-all"
+                                  >
+                                    <div className="min-w-0 mr-1.5">
+                                      <div className="flex items-center gap-1.5">
+                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate">
+                                          {doc.name}
+                                        </span>
+                                        <span className="text-[9px] px-1 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-slate-500 uppercase font-mono">
+                                          {doc.fileType}
+                                        </span>
+                                      </div>
+                                      <p className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                                        {doc.summary}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-1 shrink-0">
+                                      <a
+                                        href={doc.fileUrl}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="flex items-center gap-1 px-2.5 py-1 rounded-md bg-blue-600 hover:bg-blue-500 text-white text-[11px] font-semibold transition-all shadow-2xs cursor-pointer"
+                                        title={`Mở file gốc ${doc.fileName} (${doc.fileSize})`}
+                                      >
+                                        <Eye className="w-3 h-3" />
+                                        <span>Mở file gốc</span>
+                                      </a>
+                                      <a
+                                        href={doc.fileUrl}
+                                        download={doc.fileName}
+                                        className="p-1 rounded-md border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer transition-colors"
+                                        title={`Tải file ${doc.fileName}`}
+                                      >
+                                        <Download className="w-3 h-3" />
+                                      </a>
+                                    </div>
+                                  </div>
+                                ))}
                               </div>
                             </div>
                           );
@@ -2997,6 +3078,12 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         sessionsCount={sessions.length}
         goldenCount={getGoldenExamples().length}
         customAgentsCount={customAgents.length}
+      />
+
+      {/* 8. Official Reference Documents Library Modal */}
+      <ReferenceDocumentsModal
+        isOpen={isRefDocsModalOpen}
+        onClose={() => setIsRefDocsModalOpen(false)}
       />
     </div>
   );
