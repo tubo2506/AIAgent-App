@@ -1,4 +1,4 @@
-import type { LegalDocument } from '../types';
+import type { KnowledgeDocument, KnowledgeScope } from '../types';
 
 const DB_NAME = 'LegalKnowledgeDB';
 const DB_VERSION = 1;
@@ -36,9 +36,21 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 /**
+ * Chuẩn hóa tài liệu để đảm bảo tương thích ngược với các phiên bản cũ
+ */
+function normalizeDocument(doc: any): KnowledgeDocument {
+  return {
+    ...doc,
+    scope: (doc.scope === 'agent' ? 'agent' : 'shared') as KnowledgeScope,
+    assignedAgentIds: Array.isArray(doc.assignedAgentIds) ? doc.assignedAgentIds : [],
+    category: doc.category || 'Pháp luật & Thuế',
+  };
+}
+
+/**
  * Lấy tất cả văn bản trong kho
  */
-export async function getAllDocuments(): Promise<LegalDocument[]> {
+export async function getAllDocuments(): Promise<KnowledgeDocument[]> {
   const db = await openDB();
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readonly');
@@ -46,8 +58,8 @@ export async function getAllDocuments(): Promise<LegalDocument[]> {
     const request = store.getAll();
 
     request.onsuccess = () => {
-      // Sắp xếp văn bản mới nhất lên trước
-      const docs: LegalDocument[] = request.result || [];
+      const rawDocs = request.result || [];
+      const docs: KnowledgeDocument[] = rawDocs.map(normalizeDocument);
       docs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       resolve(docs);
     };
@@ -59,22 +71,42 @@ export async function getAllDocuments(): Promise<LegalDocument[]> {
 }
 
 /**
- * Lấy danh sách các văn bản đang được BẬT (active) để làm ngữ cảnh chat
+ * Lấy danh sách các tài liệu đang được BẬT (active) trên toàn hệ thống
  */
-export async function getActiveDocuments(): Promise<LegalDocument[]> {
+export async function getActiveDocuments(): Promise<KnowledgeDocument[]> {
   const all = await getAllDocuments();
   return all.filter((d) => d.isActive);
 }
 
 /**
+ * Lấy danh sách tài liệu đang BẬT phù hợp riêng cho Agent được chỉ định
+ * (Bao gồm: Tất cả tài liệu DÙNG CHUNG + Tài liệu được GÁN RIÊNG cho Agent này)
+ */
+export async function getKnowledgeForAgent(agentId: string): Promise<KnowledgeDocument[]> {
+  const all = await getAllDocuments();
+  return all.filter((doc) => {
+    if (!doc.isActive) return false;
+    // 1. Tài liệu dùng chung
+    if (doc.scope === 'shared') return true;
+    // 2. Tài liệu riêng cho agent
+    if (doc.scope === 'agent' && doc.assignedAgentIds.includes(agentId)) {
+      return true;
+    }
+    return false;
+  });
+}
+
+/**
  * Thêm hoặc cập nhật văn bản vào kho
  */
-export async function saveDocument(doc: LegalDocument): Promise<void> {
+export async function saveDocument(doc: KnowledgeDocument): Promise<void> {
   const db = await openDB();
+  const normalized = normalizeDocument(doc);
+
   return new Promise((resolve, reject) => {
     const tx = db.transaction(STORE_NAME, 'readwrite');
     const store = tx.objectStore(STORE_NAME);
-    const request = store.put(doc);
+    const request = store.put(normalized);
 
     request.onsuccess = () => {
       resolve();
@@ -117,17 +149,53 @@ export async function toggleDocumentActive(id: string): Promise<boolean> {
     const getReq = store.get(id);
 
     getReq.onsuccess = () => {
-      const doc: LegalDocument = getReq.result;
+      const doc = getReq.result;
       if (!doc) {
         reject(new Error('Không tìm thấy văn bản'));
         return;
       }
 
-      doc.isActive = !doc.isActive;
-      doc.updatedAt = new Date().toISOString();
+      const normalized = normalizeDocument(doc);
+      normalized.isActive = !normalized.isActive;
+      normalized.updatedAt = new Date().toISOString();
 
-      const putReq = store.put(doc);
-      putReq.onsuccess = () => resolve(doc.isActive);
+      const putReq = store.put(normalized);
+      putReq.onsuccess = () => resolve(normalized.isActive);
+      putReq.onerror = () => reject(putReq.error);
+    };
+
+    getReq.onerror = () => reject(getReq.error);
+  });
+}
+
+/**
+ * Cập nhật phạm vi áp dụng (Scope) và danh sách Agent được gán
+ */
+export async function assignDocumentScope(
+  id: string,
+  scope: KnowledgeScope,
+  assignedAgentIds: string[]
+): Promise<void> {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const getReq = store.get(id);
+
+    getReq.onsuccess = () => {
+      const doc = getReq.result;
+      if (!doc) {
+        reject(new Error('Không tìm thấy tài liệu'));
+        return;
+      }
+
+      const normalized = normalizeDocument(doc);
+      normalized.scope = scope;
+      normalized.assignedAgentIds = assignedAgentIds;
+      normalized.updatedAt = new Date().toISOString();
+
+      const putReq = store.put(normalized);
+      putReq.onsuccess = () => resolve();
       putReq.onerror = () => reject(putReq.error);
     };
 
@@ -159,6 +227,9 @@ export async function importDocumentsJson(jsonStr: string): Promise<number> {
         id: item.id,
         title: item.title,
         code: item.code,
+        scope: (item.scope === 'agent' ? 'agent' : 'shared') as KnowledgeScope,
+        assignedAgentIds: Array.isArray(item.assignedAgentIds) ? item.assignedAgentIds : [],
+        category: item.category || 'Pháp luật & Thuế',
         issuedDate: item.issuedDate,
         originalFileName: item.originalFileName || item.title,
         originalSize: item.originalSize || 0,
@@ -177,23 +248,25 @@ export async function importDocumentsJson(jsonStr: string): Promise<number> {
 }
 
 /**
- * Định dạng các văn bản đang bật thành ngữ cảnh chuẩn bị đưa vào prompt cho Gemini
+ * Định dạng các văn bản thành ngữ cảnh tri thức để đưa vào prompt cho Gemini
  */
-export function buildLegalContextPrompt(activeDocs: LegalDocument[]): string {
+export function buildLegalContextPrompt(activeDocs: KnowledgeDocument[]): string {
   if (!activeDocs || activeDocs.length === 0) return '';
 
-  let context = `\n\n[KHO VĂN BẢN PHÁP LUẬT THAM CHIẾU (Đã số hóa sẵn từ hệ thống)]\n`;
-  context += `Hệ thống có ${activeDocs.length} văn bản pháp luật chính thức đang được kích hoạt tham chiếu dưới đây:\n\n`;
+  let context = `\n\n[KHO TRI THỨC VĂN BẢN THAM CHIẾU (Đã nạp và số hóa sẵn cho Agent)]\n`;
+  context += `Hệ thống có ${activeDocs.length} tài liệu tri thức đang kích hoạt tham chiếu dưới đây:\n\n`;
 
   activeDocs.forEach((doc, idx) => {
+    const scopeLabel = doc.scope === 'shared' ? 'DÙNG CHUNG' : 'RIÊNG CHO AGENT';
     context += `=======================================================\n`;
-    context += `VĂN BẢN ${idx + 1}: ${doc.title}${doc.code ? ` (Số hiệu: ${doc.code})` : ''}\n`;
-    if (doc.issuedDate) context += `Ngày ban hành: ${doc.issuedDate}\n`;
+    context += `TÀI LIỆU ${idx + 1} [${scopeLabel}]: ${doc.title}${doc.code ? ` (Số hiệu: ${doc.code})` : ''}\n`;
+    if (doc.category) context += `Danh mục: ${doc.category}\n`;
+    if (doc.issuedDate) context += `Ngày ban hành / hiệu lực: ${doc.issuedDate}\n`;
     context += `TOÀN VĂN NỘI DUNG SỐ HÓA:\n${doc.content}\n`;
     context += `=======================================================\n\n`;
   });
 
-  context += `YÊU CẦU: Hãy căn cứ chính xác vào các Điều, Khoản, Điểm của các văn bản pháp luật số hóa ở trên để giải đáp câu hỏi của người dùng. Khi trích dẫn, hãy ghi rõ tên văn bản và số điều khoản cụ thể.\n`;
+  context += `YÊU CẦU: Hãy căn cứ chính xác vào các Điều, Khoản, Điểm hoặc các quy định trong các tài liệu tri thức ở trên để giải đáp thắc mắc của người dùng. Trích dẫn rõ ràng tên tài liệu và vị trí điều khoản liên quan.\n`;
 
   return context;
 }

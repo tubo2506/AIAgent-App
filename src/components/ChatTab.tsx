@@ -34,9 +34,9 @@ import {
   Users,
   Globe,
   ExternalLink,
-  Scale,
+  BookOpen,
 } from './icons';
-import type { ApiConfig, ChatMessage, RequestHistoryItem, UploadedFile, Agent, ChatSession } from '../types';
+import type { ApiConfig, ChatMessage, RequestHistoryItem, UploadedFile, Agent, ChatSession, KnowledgeDocument } from '../types';
 import {
   sendGeminiRequest,
   sendGeminiStreamingRequest,
@@ -51,8 +51,8 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { BUILT_IN_AGENTS } from '../data/defaultAgents';
 import { AgentSelectorModal } from './AgentSelectorModal';
 import { ChatSessionsDrawer } from './ChatSessionsDrawer';
-import { LegalKnowledgeModal } from './LegalKnowledgeModal';
-import { getActiveDocuments, buildLegalContextPrompt } from '../services/legalKnowledgeDb';
+import { KnowledgeHubModal } from './KnowledgeHubModal';
+import { getKnowledgeForAgent, buildLegalContextPrompt } from '../services/legalKnowledgeDb';
 import { searchTavily } from '../services/tavilyApi';
 
 interface ChatTabProps {
@@ -251,22 +251,23 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const speechRecognitionRef = useRef<any>(null);
 
-  // Legal Knowledge Base & PDF Digitizer Modal State
+  // Knowledge Hub Modal & Dynamic Agent Knowledge State
   const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
-  const [activeLegalDocsCount, setActiveLegalDocsCount] = useState(0);
+  const [agentKnowledgeDocs, setAgentKnowledgeDocs] = useState<KnowledgeDocument[]>([]);
 
-  const refreshActiveLegalDocs = async () => {
+  const refreshActiveKnowledge = async (agentId?: string) => {
+    const targetId = agentId || currentAgentId;
     try {
-      const activeDocs = await getActiveDocuments();
-      setActiveLegalDocsCount(activeDocs.length);
+      const docs = await getKnowledgeForAgent(targetId);
+      setAgentKnowledgeDocs(docs);
     } catch {
-      setActiveLegalDocsCount(0);
+      setAgentKnowledgeDocs([]);
     }
   };
 
   useEffect(() => {
-    refreshActiveLegalDocs();
-  }, []);
+    refreshActiveKnowledge(currentAgentId);
+  }, [currentAgentId]);
 
   // Web Search Toggle with Smart Guidance for Tavily Key
   const handleToggleWebSearch = () => {
@@ -950,15 +951,15 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       return;
     }
 
-    // 1. Fetch active legal documents from IndexedDB Knowledge Base
+    // 1. Fetch relevant knowledge for current agent (Shared + Agent-specific)
     let legalContext = '';
     try {
-      const activeDocs = await getActiveDocuments();
-      if (activeDocs.length > 0) {
-        legalContext = buildLegalContextPrompt(activeDocs);
+      const relevantDocs = await getKnowledgeForAgent(currentAgent.id);
+      if (relevantDocs.length > 0) {
+        legalContext = buildLegalContextPrompt(relevantDocs);
       }
     } catch (err) {
-      console.warn('Lỗi nạp văn bản luật từ IndexedDB:', err);
+      console.warn('Lỗi nạp tri thức từ Knowledge Hub:', err);
     }
 
     // 2. Real-time Web Search via Tavily (if enabled and provider is tavily)
@@ -1914,18 +1915,23 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                 </span>
               </button>
 
-              {/* Legal Knowledge Base & PDF Digitizer Button */}
+              {/* Knowledge Hub Button */}
               <button
                 type="button"
                 onClick={() => setIsLegalModalOpen(true)}
                 className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/60 transition-all cursor-pointer shadow-2xs"
-                title="Mở Kho văn bản luật & Số hóa PDF siêu nhẹ"
+                title="Mở Trung Tâm Quản Lý Tri Thức (Knowledge Hub)"
               >
-                <Scale className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                <span>Kho Văn Bản Luật</span>
+                <BookOpen className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Kho Tri Thức</span>
                 <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
-                  {activeLegalDocsCount} đang bật
+                  {agentKnowledgeDocs.length} tài liệu
                 </span>
+                {agentKnowledgeDocs.length > 0 && (
+                  <span className="hidden sm:inline text-[10px] text-amber-700 dark:text-amber-400 font-medium">
+                    ({agentKnowledgeDocs.filter((d) => d.scope === 'shared').length} chung, {agentKnowledgeDocs.filter((d) => d.scope === 'agent').length} riêng)
+                  </span>
+                )}
               </button>
 
               {(config.enableSearchGrounding ?? false) ? (
@@ -2394,15 +2400,17 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         </div>
       )}
 
-      {/* 5. Legal Knowledge Base & PDF Digitizer Modal */}
-      <LegalKnowledgeModal
+      {/* 5. Scientific Knowledge Hub Modal */}
+      <KnowledgeHubModal
         isOpen={isLegalModalOpen}
         onClose={() => {
           setIsLegalModalOpen(false);
-          refreshActiveLegalDocs();
+          refreshActiveKnowledge(currentAgentId);
         }}
         config={config}
-        onDocumentsUpdated={refreshActiveLegalDocs}
+        currentAgentId={currentAgentId}
+        customAgents={customAgents}
+        onDocumentsUpdated={() => refreshActiveKnowledge(currentAgentId)}
       />
     </div>
   );

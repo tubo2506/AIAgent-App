@@ -20,10 +20,15 @@ export interface ApiConfig {
   tavilyApiKey?: string; // API Key cho Tavily Search (https://tavily.com)
 }
 
-export interface LegalDocument {
+export type KnowledgeScope = 'shared' | 'agent';
+
+export interface KnowledgeDocument {
   id: string;
   title: string;
-  code?: string; // Ví dụ: 123/2020/NĐ-CP hoặc 78/2021/TT-BTC
+  code?: string; // Ví dụ: 123/2020/NĐ-CP hoặc API-SPEC-v2
+  scope: KnowledgeScope; // 'shared' (dùng chung cho mọi Agent) hoặc 'agent' (riêng cho từng Agent)
+  assignedAgentIds: string[]; // Danh sách ID các Agent được gán tài liệu này (nếu scope === 'agent')
+  category?: string; // Phân loại: 'Pháp luật & Thuế', 'Hóa đơn & Chứng từ', 'Kỹ thuật & Code', 'Kinh doanh', 'Tài liệu chung'
   issuedDate?: string;
   originalFileName: string;
   originalSize: number; // Kích thước file gốc (bytes)
@@ -34,6 +39,9 @@ export interface LegalDocument {
   createdAt: string;
   updatedAt?: string;
 }
+
+// Tương thích ngược với LegalDocument
+export type LegalDocument = KnowledgeDocument;
 
 export interface GroundingSource {
   title: string;
