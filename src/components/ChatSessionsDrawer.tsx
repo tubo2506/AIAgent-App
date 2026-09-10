@@ -12,6 +12,7 @@ import {
   MoreVertical,
   PanelLeftClose,
   Download,
+  Cloud,
 } from './icons';
 import type { ChatSession } from '../types';
 
@@ -26,6 +27,8 @@ interface ChatSessionsDrawerProps {
   onDeleteSession: (sessionId: string) => void;
   onClearAllSessions: () => void;
   onExportSession: (sessionId: string, format: 'markdown' | 'json') => void;
+  onOpenCloudSync?: () => void;
+  isCloudLinked?: boolean;
 }
 
 export const ChatSessionsDrawer: React.FC<ChatSessionsDrawerProps> = ({
@@ -39,6 +42,8 @@ export const ChatSessionsDrawer: React.FC<ChatSessionsDrawerProps> = ({
   onDeleteSession,
   onClearAllSessions,
   onExportSession,
+  onOpenCloudSync,
+  isCloudLinked,
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const [editingSessionId, setEditingSessionId] = useState<string | null>(null);
@@ -335,24 +340,43 @@ export const ChatSessionsDrawer: React.FC<ChatSessionsDrawerProps> = ({
       </div>
 
       {/* Footer */}
-      <div className="p-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 shrink-0">
-        <span>{sessions.length} cuộc trò chuyện</span>
-        {sessions.length > 1 && (
+      <div className="p-2.5 border-t border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-950/40 space-y-2 shrink-0">
+        {onOpenCloudSync && (
           <button
-            onClick={() => {
-              if (
-                window.confirm(
-                  'Bạn có chắc chắn muốn xóa tất cả các cuộc trò chuyện đã lưu?'
-                )
-              ) {
-                onClearAllSessions();
-              }
-            }}
-            className="text-[10px] text-slate-400 hover:text-rose-500 cursor-pointer"
+            type="button"
+            onClick={onOpenCloudSync}
+            className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border text-xs font-medium cursor-pointer transition-all ${
+              isCloudLinked
+                ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 hover:bg-emerald-100 dark:hover:bg-emerald-950/60'
+                : 'bg-white text-blue-600 border-blue-200 dark:bg-slate-800 dark:text-blue-400 dark:border-blue-900/60 hover:bg-blue-50/60 dark:hover:bg-slate-750'
+            }`}
           >
-            Xóa tất cả
+            <div className="flex items-center gap-1.5 min-w-0">
+              <Cloud className={`w-3.5 h-3.5 shrink-0 ${isCloudLinked ? 'text-emerald-600 dark:text-emerald-400' : 'text-blue-500'}`} />
+              <span className="truncate">{isCloudLinked ? 'Đã liên kết Cloud' : 'Đồng bộ Đám mây'}</span>
+            </div>
+            <span className="text-[10px] text-slate-400 dark:text-slate-500 shrink-0">Mở &gt;</span>
           </button>
         )}
+        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400">
+          <span>{sessions.length} cuộc trò chuyện</span>
+          {sessions.length > 1 && (
+            <button
+              onClick={() => {
+                if (
+                  window.confirm(
+                    'Bạn có chắc chắn muốn xóa tất cả các cuộc trò chuyện đã lưu?'
+                  )
+                ) {
+                  onClearAllSessions();
+                }
+              }}
+              className="text-[10px] text-slate-400 hover:text-rose-500 cursor-pointer"
+            >
+              Xóa tất cả
+            </button>
+          )}
+        </div>
       </div>
     </div>
   </>

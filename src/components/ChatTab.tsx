@@ -66,6 +66,9 @@ import { detectBestAgent } from '../services/agentRouter';
 import {
   onAuthChange,
   signInAnonymouslyUser,
+  getCurrentUser,
+  saveSessionToCloud,
+  deleteSessionFromCloud,
   syncAllSessionsToCloud,
   loadSessionsFromCloud,
   syncAllGoldenExamplesToCloud,
@@ -295,37 +298,59 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   const [isCloudModalOpen, setIsCloudModalOpen] = useState(false);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
 
-  const handleTriggerCloudSync = async () => {
-    if (!currentUser) return;
+  const handleTriggerCloudSync = async (targetUser?: FirebaseUser | null) => {
+    const activeUser = targetUser || currentUser || getCurrentUser();
+    if (!activeUser || activeUser.isAnonymous) return;
     setIsSyncingCloud(true);
     try {
-      // 1. Sync Sessions to Cloud
-      await syncAllSessionsToCloud(currentUser.uid, sessions);
+      // 1. Sync valid local sessions to Cloud (only ones with actual user messages)
+      const validLocalSessions = sessions.filter(
+        (s) => s.messages && s.messages.some((m) => m.role === 'user')
+      );
+      if (validLocalSessions.length > 0) {
+        await syncAllSessionsToCloud(activeUser.uid, validLocalSessions);
+      }
 
       // 2. Load Cloud Sessions and Merge
-      const cloudSessions = await loadSessionsFromCloud(currentUser.uid);
+      const cloudSessions = await loadSessionsFromCloud(activeUser.uid);
       if (cloudSessions.length > 0) {
         setSessions((prev) => {
           const map = new Map<string, ChatSession>();
+          // Cloud sessions as baseline
           cloudSessions.forEach((s) => map.set(s.id, s));
+          // Local sessions: keep if newer and has messages
           prev.forEach((s) => {
-            if (!map.has(s.id) || new Date(s.updatedAt) > new Date(map.get(s.id)!.updatedAt)) {
-              map.set(s.id, s);
+            const existing = map.get(s.id);
+            if (!existing || new Date(s.updatedAt) > new Date(existing.updatedAt)) {
+              if (s.messages.some((m) => m.role === 'user') || map.size === 0) {
+                map.set(s.id, s);
+              }
             }
           });
-          return Array.from(map.values()).sort(
+          const merged = Array.from(map.values()).sort(
             (a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
           );
+          return merged.length > 0 ? merged : prev;
+        });
+
+        // If currently active session is empty or just the default welcome message,
+        // automatically switch to the most recent conversation from the cloud!
+        setCurrentSessionId((prevId) => {
+          const activeSession = sessions.find((s) => s.id === prevId);
+          if (!activeSession || !activeSession.messages.some((m) => m.role === 'user')) {
+            return cloudSessions[0].id;
+          }
+          return prevId;
         });
       }
 
       // 3. Sync Golden Examples
       const localGoldens = getGoldenExamples();
-      await syncAllGoldenExamplesToCloud(currentUser.uid, localGoldens);
+      await syncAllGoldenExamplesToCloud(activeUser.uid, localGoldens);
 
       // 4. Sync Custom Agents
-      await syncAllCustomAgentsToCloud(currentUser.uid, customAgents);
-      const cloudAgents = await loadCustomAgentsFromCloud(currentUser.uid);
+      await syncAllCustomAgentsToCloud(activeUser.uid, customAgents);
+      const cloudAgents = await loadCustomAgentsFromCloud(activeUser.uid);
       if (cloudAgents.length > 0) {
         setCustomAgents((prev) => {
           const ids = new Set(prev.map((a) => a.id));
@@ -334,7 +359,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         });
       }
 
-      setFeedbackToast('☁️ Đã đồng bộ với Cloud Firestore thành công!');
+      setFeedbackToast('☁️ Đã đồng bộ lịch sử chat từ Cloud Firestore thành công!');
       setTimeout(() => setFeedbackToast(null), 3000);
     } catch (err) {
       console.warn('Lỗi đồng bộ Cloud:', err);
@@ -347,12 +372,10 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   useEffect(() => {
     const unsubscribe = onAuthChange(async (user) => {
       setCurrentUser(user);
-      if (user) {
-        // Auto pull cloud data on login
-        setTimeout(() => {
-          handleTriggerCloudSync();
-        }, 300);
-      } else {
+      if (user && !user.isAnonymous) {
+        // Automatically pull cloud data on Google login
+        handleTriggerCloudSync(user);
+      } else if (!user) {
         // Auto sign in as guest if not logged in
         try {
           await signInAnonymouslyUser();
@@ -670,8 +693,27 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       }
     }, 400);
 
-    return () => clearTimeout(timer);
-  }, [sessions, isLoading]);
+    // Tự động sao lưu phiên chat hiện tại lên Cloud Firestore khi đã đăng nhập Google (sau 2s kết thúc sinh tin nhắn)
+    const cloudTimer = setTimeout(() => {
+      const activeUser = currentUser || getCurrentUser();
+      if (
+        activeUser &&
+        !activeUser.isAnonymous &&
+        currentSession &&
+        currentSession.messages &&
+        currentSession.messages.some((m) => m.role === 'user')
+      ) {
+        saveSessionToCloud(activeUser.uid, currentSession).catch((err) => {
+          console.warn('Auto cloud sync background save error:', err);
+        });
+      }
+    }, 2000);
+
+    return () => {
+      clearTimeout(timer);
+      clearTimeout(cloudTimer);
+    };
+  }, [sessions, isLoading, currentSession, currentUser]);
 
   // Save current active session ID
   useEffect(() => {
@@ -889,6 +931,13 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   };
 
   const handleDeleteSession = (sessionId: string) => {
+    const activeUser = currentUser || getCurrentUser();
+    if (activeUser && !activeUser.isAnonymous) {
+      deleteSessionFromCloud(activeUser.uid, sessionId).catch((err) => {
+        console.warn('Failed to delete cloud session:', err);
+      });
+    }
+
     setSessions((prev) => {
       const remaining = prev.filter((s) => s.id !== sessionId);
       if (remaining.length === 0) {
@@ -1656,6 +1705,8 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         onDeleteSession={handleDeleteSession}
         onClearAllSessions={handleClearAllSessions}
         onExportSession={handleExportSession}
+        onOpenCloudSync={() => setIsCloudModalOpen(true)}
+        isCloudLinked={!!(currentUser && !currentUser.isAnonymous)}
       />
 
       {/* 2. Main Chat Area */}
@@ -1697,10 +1748,11 @@ export const ChatTab: React.FC<ChatTabProps> = ({
             {!isDrawerOpen && (
               <button
                 onClick={() => setIsDrawerOpen(true)}
-                title="Mở danh sách cuộc trò chuyện (Chat History)"
-                className="p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300 cursor-pointer transition-colors shrink-0"
+                title="Mở danh sách cuộc trò chuyện (Lịch sử chat)"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 cursor-pointer transition-colors shrink-0 shadow-2xs text-xs font-semibold"
               >
-                <PanelLeft className="w-4 h-4" />
+                <PanelLeft className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                <span className="hidden xs:inline sm:inline">Lịch sử ({sessions.length})</span>
               </button>
             )}
 

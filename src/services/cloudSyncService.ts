@@ -62,9 +62,9 @@ export async function saveSessionToCloud(userId: string, session: ChatSession): 
       })),
     }));
 
-    await setDoc(
-      sessionRef,
-      {
+    // Firestore throws error on 'undefined' values. JSON serialization safely removes all undefined fields.
+    const cleanPayload = JSON.parse(
+      JSON.stringify({
         id: session.id,
         title: session.title || 'Cuộc trò chuyện mới',
         agentId: session.agentId || 'general',
@@ -73,10 +73,11 @@ export async function saveSessionToCloud(userId: string, session: ChatSession): 
         createdAt: session.createdAt || new Date().toISOString(),
         updatedAt: session.updatedAt || new Date().toISOString(),
         messages: sanitizedMessages,
-        syncedAt: serverTimestamp(),
-      },
-      { merge: true }
+      })
     );
+    cleanPayload.syncedAt = serverTimestamp();
+
+    await setDoc(sessionRef, cleanPayload, { merge: true });
   } catch (err) {
     console.warn('Failed to save session to cloud:', err);
   }
@@ -84,8 +85,10 @@ export async function saveSessionToCloud(userId: string, session: ChatSession): 
 
 export async function syncAllSessionsToCloud(userId: string, sessions: ChatSession[]): Promise<void> {
   if (!userId || !Array.isArray(sessions)) return;
-  // Sync up to 25 latest sessions
-  const targetSessions = sessions.slice(0, 25);
+  // Sync up to 25 latest sessions that contain actual user messages (avoid syncing blank initial sessions)
+  const targetSessions = sessions
+    .filter((s) => s.messages && s.messages.some((m) => m.role === 'user'))
+    .slice(0, 25);
   for (const s of targetSessions) {
     await saveSessionToCloud(userId, s);
   }
@@ -142,14 +145,14 @@ export async function syncAllGoldenExamplesToCloud(
   if (!userId || !Array.isArray(examples)) return;
   try {
     const userDocRef = doc(db, 'users', userId, 'profile', 'golden_examples');
-    await setDoc(
-      userDocRef,
-      {
+    const cleanPayload = JSON.parse(
+      JSON.stringify({
         examples: examples.slice(0, 50),
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
+      })
     );
+    cleanPayload.updatedAt = serverTimestamp();
+
+    await setDoc(userDocRef, cleanPayload, { merge: true });
   } catch (err) {
     console.warn('Failed to sync golden examples to cloud:', err);
   }
@@ -178,14 +181,14 @@ export async function syncAllCustomAgentsToCloud(userId: string, agents: Agent[]
   if (!userId || !Array.isArray(agents)) return;
   try {
     const userDocRef = doc(db, 'users', userId, 'profile', 'custom_agents');
-    await setDoc(
-      userDocRef,
-      {
+    const cleanPayload = JSON.parse(
+      JSON.stringify({
         agents,
-        updatedAt: serverTimestamp(),
-      },
-      { merge: true }
+      })
     );
+    cleanPayload.updatedAt = serverTimestamp();
+
+    await setDoc(userDocRef, cleanPayload, { merge: true });
   } catch (err) {
     console.warn('Failed to sync custom agents to cloud:', err);
   }
