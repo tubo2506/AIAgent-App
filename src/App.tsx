@@ -207,6 +207,36 @@ export function App() {
     }
   };
 
+  // Dynamically update viewport height for mobile keyboards (visualViewport API)
+  useEffect(() => {
+    const updateHeight = () => {
+      if (window.visualViewport) {
+        const currentHeight = window.visualViewport.height;
+        document.documentElement.style.setProperty('--app-height', `${currentHeight}px`);
+      } else {
+        document.documentElement.style.setProperty('--app-height', `${window.innerHeight}px`);
+      }
+    };
+
+    updateHeight();
+
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateHeight);
+      window.visualViewport.addEventListener('scroll', updateHeight);
+    } else {
+      window.addEventListener('resize', updateHeight);
+    }
+
+    return () => {
+      if (window.visualViewport) {
+        window.visualViewport.removeEventListener('resize', updateHeight);
+        window.visualViewport.removeEventListener('scroll', updateHeight);
+      } else {
+        window.removeEventListener('resize', updateHeight);
+      }
+    };
+  }, []);
+
   // Manage Dark / Light theme class on html document
   useEffect(() => {
     if (config.theme === 'dark') {
@@ -277,7 +307,10 @@ export function App() {
   }
 
   return (
-    <div className="h-screen h-[100dvh] bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-hidden selection:bg-blue-600/20 selection:text-blue-700 dark:selection:bg-blue-600/30 dark:selection:text-blue-200 transition-colors">
+    <div
+      style={{ height: 'var(--app-height, 100dvh)' }}
+      className="w-full bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col overflow-hidden selection:bg-blue-600/20 selection:text-blue-700 dark:selection:bg-blue-600/30 dark:selection:text-blue-200 transition-colors"
+    >
       {/* Top Header */}
       {/* Top Header with Integrated Navigation Tabs */}
       <Header

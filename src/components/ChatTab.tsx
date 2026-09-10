@@ -514,6 +514,21 @@ export const ChatTab: React.FC<ChatTabProps> = ({
     }
   }, [messages, isLoading]);
 
+  // Auto-scroll to latest message when mobile keyboard opens
+  useEffect(() => {
+    const handleViewportResize = () => {
+      if (scrollContainerRef.current) {
+        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+      }
+    };
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', handleViewportResize);
+      return () => {
+        window.visualViewport?.removeEventListener('resize', handleViewportResize);
+      };
+    }
+  }, []);
+
   const handleContainerScroll = () => {
     if (!scrollContainerRef.current) return;
     const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
@@ -1821,7 +1836,12 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                                   type="button"
                                   onClick={() => {
                                     setInputText(q);
-                                    textareaRef.current?.focus();
+                                    setTimeout(() => {
+                                      textareaRef.current?.focus();
+                                      if (scrollContainerRef.current) {
+                                        scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+                                      }
+                                    }, 100);
                                   }}
                                   title="Điền câu hỏi này vào ô nhập liệu để chỉnh sửa trước khi gửi"
                                   className="p-1 rounded-md text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/80 dark:hover:bg-slate-700 cursor-pointer transition-colors"
@@ -1963,27 +1983,30 @@ export const ChatTab: React.FC<ChatTabProps> = ({
           </button>
         )}
 
-        {/* Starter Prompts Bar (dynamically tailored to current agent) */}
-        <div className="px-5 py-2 bg-white/70 dark:bg-slate-900/70 border-t border-slate-200 dark:border-slate-800/80 shrink-0">
-          <div className={`${containerWidthClass} mx-auto flex items-center gap-2 overflow-x-auto pb-1`}>
-            <span className="text-[11px] text-slate-400 font-medium shrink-0 flex items-center gap-1">
-              <Sparkles className="w-3 h-3 text-amber-500" />
-              <span>Gợi ý {currentAgent.name}:</span>
-            </span>
-            {activeStarterPrompts.map((prompt, idx) => (
-              <button
-                key={idx}
-                onClick={() => handleSend(prompt)}
-                className="text-xs px-3 py-1 rounded-full bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 transition-all text-left truncate max-w-xs shadow-2xs cursor-pointer shrink-0"
-              >
-                {prompt}
-              </button>
-            ))}
+        {/* Starter Prompts Bar (dynamically tailored to current agent, only shown when session is new) */}
+        {messages.length <= 1 && (
+          <div className="px-3 sm:px-5 py-2 bg-white/70 dark:bg-slate-900/70 border-t border-slate-200 dark:border-slate-800/80 shrink-0">
+            <div className={`${containerWidthClass} mx-auto flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none`}>
+              <span className="text-[11px] text-slate-400 font-medium shrink-0 flex items-center gap-1">
+                <Sparkles className="w-3 h-3 text-amber-500" />
+                <span className="hidden sm:inline">Gợi ý {currentAgent.name}:</span>
+                <span className="sm:hidden">Gợi ý:</span>
+              </span>
+              {activeStarterPrompts.map((prompt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => handleSend(prompt)}
+                  className="text-xs px-2.5 sm:px-3 py-1 rounded-full bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:text-blue-600 dark:hover:text-blue-400 hover:border-blue-300 transition-all text-left truncate max-w-xs shadow-2xs cursor-pointer shrink-0"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Input box area */}
-        <div className="p-2 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur transition-colors shrink-0 relative z-20">
+        <div className="p-1.5 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur transition-colors shrink-0 relative z-20">
           {/* Attachment chips preview */}
           {attachments.length > 0 && (
             <div className={`${containerWidthClass} mx-auto mb-2 flex flex-wrap gap-1.5 sm:gap-2`}>
@@ -2013,13 +2036,13 @@ export const ChatTab: React.FC<ChatTabProps> = ({
           )}
 
           {/* Quick Action Toolbar: Web Search & Legal Knowledge Base */}
-          <div className={`${containerWidthClass} mx-auto mb-2 flex items-center justify-between gap-2 flex-wrap`}>
-            <div className="flex items-center gap-2 flex-wrap">
+          <div className={`${containerWidthClass} mx-auto mb-1.5 flex items-center justify-between gap-1.5 overflow-x-auto scrollbar-none`}>
+            <div className="flex items-center gap-1.5 shrink-0">
               {/* Web Search Grounding Switch */}
               <button
                 type="button"
                 onClick={handleToggleWebSearch}
-                className={`flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
+                className={`flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs shrink-0 ${
                   (config.enableSearchGrounding ?? false)
                     ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm ring-2 ring-blue-500/20'
                     : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
@@ -2027,15 +2050,15 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                 title="Bấm để bật/tắt tính năng tìm kiếm web thời gian thực cho mọi câu hỏi"
               >
                 <Globe className={`w-3.5 h-3.5 ${(config.enableSearchGrounding ?? false) ? 'animate-pulse' : ''}`} />
-                <span>Tra cứu Web ({config.searchProvider === 'google' ? 'Google' : 'Tavily'})</span>
+                <span className="text-[11px] sm:text-xs">Tra cứu Web ({config.searchProvider === 'google' ? 'Google' : 'Tavily'})</span>
                 <span
-                  className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                  className={`px-1.5 py-0.2 rounded text-[9px] sm:text-[10px] font-bold ${
                     (config.enableSearchGrounding ?? false)
                       ? 'bg-blue-800 text-white'
                       : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                   }`}
                 >
-                  {(config.enableSearchGrounding ?? false) ? 'ĐANG BẬT' : 'ĐANG TẮT'}
+                  {(config.enableSearchGrounding ?? false) ? 'BẬT' : 'TẮT'}
                 </span>
               </button>
 
@@ -2043,30 +2066,25 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               <button
                 type="button"
                 onClick={() => setIsLegalModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/60 transition-all cursor-pointer shadow-2xs"
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/60 transition-all cursor-pointer shadow-2xs shrink-0"
                 title="Mở Trung Tâm Quản Lý Tri Thức (Knowledge Hub)"
               >
                 <BookOpen className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
-                <span>Kho Tri Thức</span>
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
-                  {agentKnowledgeDocs.length} tài liệu
+                <span className="text-[11px] sm:text-xs">Kho Tri Thức</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[9px] sm:text-[10px] font-bold bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
+                  {agentKnowledgeDocs.length}
                 </span>
-                {agentKnowledgeDocs.length > 0 && (
-                  <span className="hidden sm:inline text-[10px] text-amber-700 dark:text-amber-400 font-medium">
-                    ({agentKnowledgeDocs.filter((d) => d.scope === 'shared').length} chung, {agentKnowledgeDocs.filter((d) => d.scope === 'agent').length} riêng)
-                  </span>
-                )}
               </button>
 
               {(config.enableSearchGrounding ?? false) ? (
                 <span className="hidden lg:inline-flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                  <span>Tra cứu {config.searchProvider === 'google' ? 'Google Grounding' : 'Tavily AI'} cập nhật mới nhất</span>
+                  <span>Tra cứu {config.searchProvider === 'google' ? 'Google' : 'Tavily'} mới nhất</span>
                 </span>
               ) : null}
             </div>
 
-            <div className="flex items-center gap-2 text-[11px] text-slate-400">
+            <div className="hidden md:flex items-center gap-2 text-[11px] text-slate-400 shrink-0">
               <span>Model: <strong className="text-slate-600 dark:text-slate-300 font-mono">{config.model}</strong></span>
             </div>
           </div>
@@ -2077,14 +2095,14 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                 textareaRef.current?.focus();
               }
             }}
-            className={`${containerWidthClass} mx-auto relative flex items-end gap-1.5 sm:gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-2xl p-1.5 sm:p-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-xs cursor-text`}
+            className={`${containerWidthClass} mx-auto relative flex items-end gap-1 sm:gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-2xl p-1 sm:p-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-xs cursor-text`}
           >
             {/* File Upload Button */}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
               title="Đính kèm ảnh hoặc tài liệu PDF để OCR / phân tích"
-              className="p-2 rounded-xl text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
+              className="p-1.5 sm:p-2 rounded-xl text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition-colors cursor-pointer shrink-0"
             >
               <Paperclip className="w-4 h-4" />
             </button>
@@ -2098,7 +2116,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                   ? 'Đang lắng nghe tiếng Việt... Bấm để dừng'
                   : 'Nói để nhập câu hỏi bằng giọng nói tiếng Việt (Chrome/Edge)'
               }
-              className={`p-2 rounded-xl transition-all cursor-pointer shrink-0 ${
+              className={`p-1.5 sm:p-2 rounded-xl transition-all cursor-pointer shrink-0 ${
                 isListening
                   ? 'bg-rose-500 text-white animate-pulse shadow-md shadow-rose-500/30 ring-2 ring-rose-400'
                   : 'text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-200/70 dark:hover:bg-slate-800'
@@ -2107,7 +2125,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
             </button>
 
-            {/* Google Search Grounding Toggle Button */}
+            {/* Google Search Grounding Toggle Button (Desktop/Tablet) */}
             <button
               type="button"
               onClick={() =>
@@ -2120,14 +2138,14 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                   ? '🌐 Tra cứu Web thời gian thực (Google Search: ĐANG BẬT) - Bấm để tắt'
                   : '🌐 Tra cứu Web qua Google Search (ĐANG TẮT) - Bấm để bật'
               }
-              className={`flex items-center gap-1 px-2 sm:px-2.5 py-2 rounded-xl transition-all cursor-pointer shrink-0 text-xs font-semibold ${
+              className={`hidden sm:flex items-center gap-1 px-2 sm:px-2.5 py-2 rounded-xl transition-all cursor-pointer shrink-0 text-xs font-semibold ${
                 (config.enableSearchGrounding ?? true)
                   ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs ring-1 ring-blue-400'
                   : 'text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-200/70 dark:hover:bg-slate-800'
               }`}
             >
               <Globe className="w-4 h-4" />
-              <span className="hidden sm:inline">Web Search</span>
+              <span>Web Search</span>
             </button>
 
             <textarea
@@ -2138,24 +2156,26 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               onPaste={handlePaste}
               onFocus={() => {
                 setTimeout(() => {
-                  textareaRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
-                }, 300);
+                  if (scrollContainerRef.current) {
+                    scrollContainerRef.current.scrollTop = scrollContainerRef.current.scrollHeight;
+                  }
+                }, 200);
               }}
               placeholder={
                 isListening
-                  ? '🎙️ Đang lắng nghe giọng nói của bạn...'
+                  ? '🎙️ Đang lắng nghe giọng nói...'
                   : attachments.length > 0
-                  ? 'Nhập yêu cầu OCR hoặc câu hỏi về tài liệu đính kèm... (Enter để gửi)'
-                  : `Hỏi ${currentAgent.name}... Dán ảnh hoặc kéo thả file`
+                  ? 'Nhập câu hỏi về tài liệu... (Enter để gửi)'
+                  : `Hỏi ${currentAgent.name}...`
               }
               rows={1}
-              style={{ minHeight: '40px', maxHeight: '180px' }}
+              style={{ minHeight: '38px', maxHeight: '140px' }}
               autoComplete="off"
               autoCorrect="on"
               autoCapitalize="sentences"
               spellCheck="false"
               enterKeyHint="send"
-              className="flex-1 bg-transparent text-base sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none px-2 py-2 focus:outline-none leading-relaxed select-text touch-manipulation"
+              className="flex-1 bg-transparent text-base sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none px-2 py-1.5 focus:outline-none leading-relaxed select-text touch-manipulation"
             />
 
             {isLoading ? (
@@ -2179,31 +2199,14 @@ export const ChatTab: React.FC<ChatTabProps> = ({
             )}
           </div>
 
-          <div className={`${containerWidthClass} mx-auto mt-1 flex flex-wrap items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1 gap-1.5`}>
+          <div className={`${containerWidthClass} mx-auto mt-1 hidden sm:flex flex-wrap items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 px-1 gap-1.5`}>
             <div className="flex items-center gap-2 flex-wrap">
-              <button
-                type="button"
-                onClick={() =>
-                  onConfigChange?.({
-                    enableSearchGrounding: !(config.enableSearchGrounding ?? true),
-                  })
-                }
-                className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-medium transition-colors cursor-pointer ${
-                  (config.enableSearchGrounding ?? true)
-                    ? 'bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
-                }`}
-                title="Bấm để bật/tắt Google Search Grounding"
-              >
-                <Globe className="w-2.5 h-2.5" />
-                <span>Google Search: {(config.enableSearchGrounding ?? true) ? 'Bật' : 'Tắt'}</span>
-              </button>
               <span className="flex items-center gap-1.5">
                 <Paperclip className="w-3 h-3 text-blue-500" />
-                <span>Dán ảnh <strong className="hidden sm:inline">Ctrl+V</strong>, kéo thả file hoặc bấm 📎 để upload OCR</span>
+                <span>Dán ảnh <strong>Ctrl+V</strong>, kéo thả file hoặc bấm 📎 để upload OCR</span>
               </span>
             </div>
-            <div className="hidden sm:flex items-center gap-3">
+            <div className="flex items-center gap-3">
               <span><strong>↑</strong> điền lại tin nhắn cũ</span>
               <span><strong>Shift+Enter</strong> xuống dòng</span>
             </div>
