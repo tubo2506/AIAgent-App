@@ -502,20 +502,6 @@ export const ChatTab: React.FC<ChatTabProps> = ({
     }
   };
 
-  // Extract latest suggested follow-up questions for floating 1-touch chips
-  const latestSuggestedQuestions = React.useMemo(() => {
-    if (isLoading) return [];
-    const latestModel = [...messages]
-      .reverse()
-      .find((msg) => msg.role === 'model' && msg.status !== 'error' && !msg.id.startsWith('welcome'));
-    if (!latestModel || !latestModel.content) return [];
-    if (latestModel.suggestedQuestions && latestModel.suggestedQuestions.length > 0) {
-      return latestModel.suggestedQuestions;
-    }
-    const parsed = parseFollowUpQuestions(latestModel.content, currentAgent, true);
-    return parsed.questions || [];
-  }, [isLoading, messages, currentAgent]);
-
   // Sync active session agent with currentAgentId
   useEffect(() => {
     if (currentSession && currentSession.agentId !== currentAgentId) {
@@ -2215,32 +2201,6 @@ export const ChatTab: React.FC<ChatTabProps> = ({
           </div>
         )}
 
-        {/* Floating 1-Touch Follow-up Suggestions Bar (dynamically suggested questions based on last response) */}
-        {!isLoading && latestSuggestedQuestions.length > 0 && (
-          <div className="px-3 sm:px-4 py-2 bg-gradient-to-r from-blue-50/95 via-indigo-50/90 to-blue-50/95 dark:from-slate-900/95 dark:via-blue-950/50 dark:to-slate-900/95 border-t border-blue-200/70 dark:border-blue-900/50 backdrop-blur-xs shrink-0 transition-all animate-in fade-in slide-in-from-bottom-2">
-            <div className={`${containerWidthClass} mx-auto flex items-center gap-2 overflow-x-auto pb-0.5 scrollbar-none`}>
-              <span className="text-[11px] font-bold text-blue-700 dark:text-blue-300 shrink-0 flex items-center gap-1.5 uppercase tracking-wider">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500 animate-pulse" />
-                <span>Gợi ý 1-chạm:</span>
-              </span>
-              {latestSuggestedQuestions.map((q, idx) => (
-                <button
-                  key={idx}
-                  type="button"
-                  onClick={() => handleSend(q)}
-                  disabled={isLoading}
-                  className="group flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 hover:bg-blue-600 hover:text-white dark:hover:bg-blue-600 border border-blue-200 dark:border-slate-700 hover:border-blue-500 text-xs text-slate-800 dark:text-slate-200 hover:text-white transition-all shadow-2xs hover:shadow-xs active:scale-95 cursor-pointer shrink-0 font-medium max-w-xs sm:max-w-md truncate text-left"
-                  title="Chạm 1 lần để hỏi ngay câu này"
-                >
-                  <span className="w-1.5 h-1.5 rounded-full bg-blue-500 group-hover:bg-white shrink-0"></span>
-                  <span className="truncate">{q}</span>
-                  <ArrowRight className="w-3 h-3 opacity-60 group-hover:opacity-100 group-hover:translate-x-0.5 transition-all shrink-0" />
-                </button>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Input box area */}
         <div className="p-1.5 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur transition-colors shrink-0 relative z-20">
           {/* Attachment chips preview */}
@@ -2359,29 +2319,6 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               }`}
             >
               {isListening ? <MicOff className="w-4 h-4" /> : <Mic className="w-4 h-4" />}
-            </button>
-
-            {/* Google Search Grounding Toggle Button (Desktop/Tablet) */}
-            <button
-              type="button"
-              onClick={() =>
-                onConfigChange?.({
-                  enableSearchGrounding: !(config.enableSearchGrounding ?? true),
-                })
-              }
-              title={
-                (config.enableSearchGrounding ?? true)
-                  ? '🌐 Tra cứu Web thời gian thực (Google Search: ĐANG BẬT) - Bấm để tắt'
-                  : '🌐 Tra cứu Web qua Google Search (ĐANG TẮT) - Bấm để bật'
-              }
-              className={`hidden sm:flex items-center gap-1 px-2 sm:px-2.5 py-2 rounded-xl transition-all cursor-pointer shrink-0 text-xs font-semibold ${
-                (config.enableSearchGrounding ?? true)
-                  ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-xs ring-1 ring-blue-400'
-                  : 'text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400 hover:bg-slate-200/70 dark:hover:bg-slate-800'
-              }`}
-            >
-              <Globe className="w-4 h-4" />
-              <span>Web Search</span>
             </button>
 
             <textarea
