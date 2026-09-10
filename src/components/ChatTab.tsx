@@ -166,8 +166,13 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   const currentSession = sessions.find((s) => s.id === currentSessionId) || sessions[0];
   const messages = currentSession?.messages || [];
 
-  // UI state
-  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(true);
+  // UI state (Default closed on mobile/tablet to avoid screen-covering backdrop)
+  const [isDrawerOpen, setIsDrawerOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1024) {
+      return false;
+    }
+    return true;
+  });
   const [isAgentModalOpen, setIsAgentModalOpen] = useState<boolean>(false);
   const [inputText, setInputText] = useState('');
   const [attachments, setAttachments] = useState<UploadedFile[]>([]);
@@ -182,8 +187,11 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
 
-  // Right Control & Inspector Panel state (Desktop default open, remembers user preference)
+  // Right Control & Inspector Panel state (Desktop default open, closed on mobile to prevent backdrop trap)
   const [isRightPanelOpen, setIsRightPanelOpen] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.innerWidth < 1280) {
+      return false;
+    }
     try {
       const saved = localStorage.getItem(STORAGE_RIGHT_PANEL_KEY);
       if (saved !== null) return saved === 'true';
@@ -696,7 +704,9 @@ export const ChatTab: React.FC<ChatTabProps> = ({
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    setIsDragging(true);
+    if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+      setIsDragging(true);
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
@@ -1101,6 +1111,11 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    // Return early during IME composition (Vietnamese Telex/VNI or Android keyboard suggestions)
+    if (e.nativeEvent.isComposing || (e as any).isComposing || e.keyCode === 229) {
+      return;
+    }
+
     // Arrow Up when input is empty recalls the last user question
     if (e.key === 'ArrowUp' && !inputText.trim()) {
       e.preventDefault();
@@ -1111,9 +1126,19 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       return;
     }
 
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
+    // On mobile devices (phones/touchscreens), Enter inserts a newline rather than sending prematurely
+    const isMobileDevice =
+      typeof window !== 'undefined' &&
+      (window.innerWidth < 768 || /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent));
+
+    if (e.key === 'Enter') {
+      if (isMobileDevice) {
+        return; // Allow native newline on mobile
+      }
+      if (!e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
     }
   };
 
@@ -1182,7 +1207,10 @@ export const ChatTab: React.FC<ChatTabProps> = ({
 
         {/* Drag & drop overlay */}
         {isDragging && (
-          <div className="absolute inset-0 bg-blue-600/10 dark:bg-blue-600/20 backdrop-blur-xs border-2 border-dashed border-blue-500 z-50 flex flex-col items-center justify-center gap-3">
+          <div
+            onClick={() => setIsDragging(false)}
+            className="absolute inset-0 bg-blue-600/10 dark:bg-blue-600/20 backdrop-blur-xs border-2 border-dashed border-blue-500 z-50 flex flex-col items-center justify-center gap-3 cursor-pointer"
+          >
             <div className="w-16 h-16 rounded-2xl bg-white dark:bg-slate-900 shadow-xl flex items-center justify-center">
               <Paperclip className="w-8 h-8 text-blue-600 dark:text-blue-400 animate-bounce" />
             </div>
@@ -1643,7 +1671,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         </div>
 
         {/* Input box area */}
-        <div className="p-2.5 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur transition-colors shrink-0">
+        <div className="p-2 sm:p-4 border-t border-slate-200 dark:border-slate-800 bg-white/95 dark:bg-slate-900/95 backdrop-blur transition-colors shrink-0 relative z-20">
           {/* Attachment chips preview */}
           {attachments.length > 0 && (
             <div className={`${containerWidthClass} mx-auto mb-2 flex flex-wrap gap-1.5 sm:gap-2`}>
@@ -1672,7 +1700,14 @@ export const ChatTab: React.FC<ChatTabProps> = ({
             </div>
           )}
 
-          <div className={`${containerWidthClass} mx-auto relative flex items-end gap-1.5 sm:gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-2xl p-1.5 sm:p-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-xs`}>
+          <div
+            onClick={(e) => {
+              if (e.target === e.currentTarget) {
+                textareaRef.current?.focus();
+              }
+            }}
+            className={`${containerWidthClass} mx-auto relative flex items-end gap-1.5 sm:gap-2 bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700/80 rounded-2xl p-1.5 sm:p-2 focus-within:border-blue-500 focus-within:ring-2 focus-within:ring-blue-500/20 transition-all shadow-xs cursor-text`}
+          >
             {/* File Upload Button */}
             <button
               type="button"
@@ -1707,6 +1742,11 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               onChange={(e) => setInputText(e.target.value)}
               onKeyDown={handleKeyDown}
               onPaste={handlePaste}
+              onFocus={() => {
+                setTimeout(() => {
+                  textareaRef.current?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+                }, 300);
+              }}
               placeholder={
                 isListening
                   ? '🎙️ Đang lắng nghe giọng nói của bạn...'
@@ -1716,7 +1756,12 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               }
               rows={1}
               style={{ minHeight: '40px', maxHeight: '180px' }}
-              className="flex-1 bg-transparent text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none px-2 py-2 focus:outline-none leading-relaxed"
+              autoComplete="off"
+              autoCorrect="on"
+              autoCapitalize="sentences"
+              spellCheck="false"
+              enterKeyHint="send"
+              className="flex-1 bg-transparent text-base sm:text-sm text-slate-900 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 resize-none px-2 py-2 focus:outline-none leading-relaxed select-text touch-manipulation"
             />
 
             {isLoading ? (
