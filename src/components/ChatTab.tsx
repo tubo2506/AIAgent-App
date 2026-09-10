@@ -34,6 +34,7 @@ import {
   Users,
   Globe,
   ExternalLink,
+  Scale,
 } from './icons';
 import type { ApiConfig, ChatMessage, RequestHistoryItem, UploadedFile, Agent, ChatSession } from '../types';
 import {
@@ -50,6 +51,9 @@ import { MarkdownRenderer } from './MarkdownRenderer';
 import { BUILT_IN_AGENTS } from '../data/defaultAgents';
 import { AgentSelectorModal } from './AgentSelectorModal';
 import { ChatSessionsDrawer } from './ChatSessionsDrawer';
+import { LegalKnowledgeModal } from './LegalKnowledgeModal';
+import { getActiveDocuments, buildLegalContextPrompt } from '../services/legalKnowledgeDb';
+import { searchTavily } from '../services/tavilyApi';
 
 interface ChatTabProps {
   config: ApiConfig;
@@ -58,6 +62,7 @@ interface ChatTabProps {
   onAddHistory: (item: RequestHistoryItem) => void;
   onUpdateMetrics: (latency: number, status: number) => void;
   onConfigChange?: (patch: Partial<ApiConfig>) => void;
+  onNavigateTab?: (tab: string) => void;
   isUnlocked?: boolean;
   onRequestUnlock?: (callback: () => void) => void;
 }
@@ -85,6 +90,7 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   onAddHistory,
   onUpdateMetrics,
   onConfigChange,
+  onNavigateTab,
   isUnlocked,
   onRequestUnlock,
 }) => {
@@ -244,6 +250,38 @@ export const ChatTab: React.FC<ChatTabProps> = ({
   const abortControllerRef = useRef<AbortController | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const speechRecognitionRef = useRef<any>(null);
+
+  // Legal Knowledge Base & PDF Digitizer Modal State
+  const [isLegalModalOpen, setIsLegalModalOpen] = useState(false);
+  const [activeLegalDocsCount, setActiveLegalDocsCount] = useState(0);
+
+  const refreshActiveLegalDocs = async () => {
+    try {
+      const activeDocs = await getActiveDocuments();
+      setActiveLegalDocsCount(activeDocs.length);
+    } catch {
+      setActiveLegalDocsCount(0);
+    }
+  };
+
+  useEffect(() => {
+    refreshActiveLegalDocs();
+  }, []);
+
+  // Web Search Toggle with Smart Guidance for Tavily Key
+  const handleToggleWebSearch = () => {
+    const nextState = !(config.enableSearchGrounding ?? false);
+    if (nextState && (config.searchProvider || 'tavily') === 'tavily' && !config.tavilyApiKey?.trim()) {
+      const confirmed = window.confirm(
+        'Bạn đang bật Tra cứu Web nhưng chưa cấu hình Tavily API Key (1.000 lượt miễn phí/tháng, không cần thẻ ngân hàng).\n\nBạn có muốn chuyển sang trang Cài đặt để nhập Key không?'
+      );
+      if (confirmed && onNavigateTab) {
+        onNavigateTab('settings');
+        return;
+      }
+    }
+    onConfigChange?.({ enableSearchGrounding: nextState });
+  };
 
   // Sync active session agent with currentAgentId
   useEffect(() => {
@@ -912,9 +950,43 @@ export const ChatTab: React.FC<ChatTabProps> = ({
       return;
     }
 
+    // 1. Fetch active legal documents from IndexedDB Knowledge Base
+    let legalContext = '';
+    try {
+      const activeDocs = await getActiveDocuments();
+      if (activeDocs.length > 0) {
+        legalContext = buildLegalContextPrompt(activeDocs);
+      }
+    } catch (err) {
+      console.warn('Lỗi nạp văn bản luật từ IndexedDB:', err);
+    }
+
+    // 2. Real-time Web Search via Tavily (if enabled and provider is tavily)
+    let tavilyFormattedContext = '';
+    let tavilySources: Array<{ title: string; url: string }> = [];
+    if (config.enableSearchGrounding && (config.searchProvider || 'tavily') === 'tavily') {
+      if (config.tavilyApiKey && config.tavilyApiKey.trim() && text) {
+        try {
+          const tavilyRes = await searchTavily(text, config.tavilyApiKey);
+          tavilyFormattedContext = tavilyRes.formattedContext;
+          tavilySources = tavilyRes.sources;
+        } catch (tavilyErr: any) {
+          console.warn('Tavily search failed:', tavilyErr);
+        }
+      }
+    }
+
+    const effectiveSystemInstruction = [
+      currentAgent.systemInstruction || config.systemInstruction,
+      legalContext,
+      tavilyFormattedContext,
+    ]
+      .filter(Boolean)
+      .join('\n\n');
+
     const effectiveConfig: ApiConfig = {
       ...config,
-      systemInstruction: currentAgent.systemInstruction || config.systemInstruction,
+      systemInstruction: effectiveSystemInstruction,
     };
 
     const payload = buildPayload(contents as any, effectiveConfig);
@@ -964,7 +1036,15 @@ export const ChatTab: React.FC<ChatTabProps> = ({
 
         if (response.success) {
           const tokens = extractTokenUsage(response.data);
-          const groundingMetadata = extractGroundingMetadata(response.data);
+          let groundingMetadata = extractGroundingMetadata(response.data);
+          if (!groundingMetadata && tavilySources.length > 0) {
+            groundingMetadata = {
+              webSearchQueries: [text],
+              groundingChunks: tavilySources.map((s) => ({
+                web: { uri: s.url, title: s.title },
+              })),
+            };
+          }
           updateCurrentMessages((prev) =>
             prev.map((msg) => {
               if (msg.id !== modelMessageId) return msg;
@@ -1064,7 +1144,15 @@ export const ChatTab: React.FC<ChatTabProps> = ({
         if (response.success) {
           const responseText = extractResponseText(response.data);
           const tokens = extractTokenUsage(response.data);
-          const groundingMetadata = extractGroundingMetadata(response.data);
+          let groundingMetadata = extractGroundingMetadata(response.data);
+          if (!groundingMetadata && tavilySources.length > 0) {
+            groundingMetadata = {
+              webSearchQueries: [text],
+              groundingChunks: tavilySources.map((s) => ({
+                web: { uri: s.url, title: s.title },
+              })),
+            };
+          }
           const parsed = parseFollowUpQuestions(responseText, currentAgent, true);
 
           updateCurrentMessages((prev) =>
@@ -1799,47 +1887,53 @@ export const ChatTab: React.FC<ChatTabProps> = ({
             </div>
           )}
 
-          {/* Quick Action Toolbar: Web Search & Features */}
+          {/* Quick Action Toolbar: Web Search & Legal Knowledge Base */}
           <div className={`${containerWidthClass} mx-auto mb-2 flex items-center justify-between gap-2 flex-wrap`}>
-            <div className="flex items-center gap-2">
-              {/* Prominent Google Search Grounding Switch */}
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Web Search Grounding Switch */}
               <button
                 type="button"
-                onClick={() =>
-                  onConfigChange?.({
-                    enableSearchGrounding: !(config.enableSearchGrounding ?? true),
-                  })
-                }
+                onClick={handleToggleWebSearch}
                 className={`flex items-center gap-2 px-3 py-1 rounded-xl text-xs font-semibold transition-all cursor-pointer shadow-2xs ${
-                  (config.enableSearchGrounding ?? true)
+                  (config.enableSearchGrounding ?? false)
                     ? 'bg-blue-600 hover:bg-blue-500 text-white shadow-sm ring-2 ring-blue-500/20'
                     : 'bg-white hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                 }`}
-                title="Bấm để bật/tắt tính năng tìm kiếm Google thời gian thực cho mọi câu hỏi"
+                title="Bấm để bật/tắt tính năng tìm kiếm web thời gian thực cho mọi câu hỏi"
               >
-                <Globe className={`w-3.5 h-3.5 ${(config.enableSearchGrounding ?? true) ? 'animate-pulse' : ''}`} />
-                <span>Tra cứu Web Google</span>
+                <Globe className={`w-3.5 h-3.5 ${(config.enableSearchGrounding ?? false) ? 'animate-pulse' : ''}`} />
+                <span>Tra cứu Web ({config.searchProvider === 'google' ? 'Google' : 'Tavily'})</span>
                 <span
                   className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
-                    (config.enableSearchGrounding ?? true)
+                    (config.enableSearchGrounding ?? false)
                       ? 'bg-blue-800 text-white'
                       : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
                   }`}
                 >
-                  {(config.enableSearchGrounding ?? true) ? 'ĐANG BẬT' : 'ĐANG TẮT'}
+                  {(config.enableSearchGrounding ?? false) ? 'ĐANG BẬT' : 'ĐANG TẮT'}
                 </span>
               </button>
 
-              {(config.enableSearchGrounding ?? true) ? (
-                <span className="hidden sm:inline-flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
+              {/* Legal Knowledge Base & PDF Digitizer Button */}
+              <button
+                type="button"
+                onClick={() => setIsLegalModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1 rounded-xl text-xs font-semibold bg-amber-50 dark:bg-amber-950/60 hover:bg-amber-100 dark:hover:bg-amber-900/60 text-amber-900 dark:text-amber-200 border border-amber-300 dark:border-amber-700/60 transition-all cursor-pointer shadow-2xs"
+                title="Mở Kho văn bản luật & Số hóa PDF siêu nhẹ"
+              >
+                <Scale className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
+                <span>Kho Văn Bản Luật</span>
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-200 dark:bg-amber-900 text-amber-900 dark:text-amber-100">
+                  {activeLegalDocsCount} đang bật
+                </span>
+              </button>
+
+              {(config.enableSearchGrounding ?? false) ? (
+                <span className="hidden lg:inline-flex items-center gap-1.5 text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping"></span>
-                  <span>Tự động tìm kiếm luật, nghị định và tin mới nhất</span>
+                  <span>Tra cứu {config.searchProvider === 'google' ? 'Google Grounding' : 'Tavily AI'} cập nhật mới nhất</span>
                 </span>
-              ) : (
-                <span className="hidden sm:inline-flex items-center gap-1 text-[11px] text-slate-400">
-                  <span>Chế độ trí nhớ tĩnh (không tra cứu web)</span>
-                </span>
-              )}
+              ) : null}
             </div>
 
             <div className="flex items-center gap-2 text-[11px] text-slate-400">
@@ -2299,6 +2393,17 @@ export const ChatTab: React.FC<ChatTabProps> = ({
           </div>
         </div>
       )}
+
+      {/* 5. Legal Knowledge Base & PDF Digitizer Modal */}
+      <LegalKnowledgeModal
+        isOpen={isLegalModalOpen}
+        onClose={() => {
+          setIsLegalModalOpen(false);
+          refreshActiveLegalDocs();
+        }}
+        config={config}
+        onDocumentsUpdated={refreshActiveLegalDocs}
+      />
     </div>
   );
 };

@@ -30,7 +30,9 @@ const DEFAULT_CONFIG: ApiConfig = {
   topP: 0.95,
   topK: 40,
   maxOutputTokens: 8192, // Tăng lên 8192 để các model suy luận (thinking) không bị ngắt giữa chừng
-  enableSearchGrounding: false, // Mặc định TẮT để tài khoản Free Tier không bị lỗi 429 Billing Quota (bật khi có liên kết Billing)
+  enableSearchGrounding: false, // Mặc định TẮT (bật khi muốn tra cứu web thời gian thực)
+  searchProvider: 'tavily', // Mặc định dùng Tavily Search (1.000 lượt miễn phí, không cần thẻ ngân hàng)
+  tavilyApiKey: '',
 };
 
 const STORAGE_CONFIG_KEY = 'gemini_studio_config_v2';
@@ -298,6 +300,7 @@ export function App() {
               setLastStatus(st);
             }}
             onConfigChange={(patch) => setConfig((prev) => ({ ...prev, ...patch }))}
+            onNavigateTab={(tab) => handleTabClick(tab as any)}
             isUnlocked={isUnlocked}
             onRequestUnlock={requireUnlock}
           />

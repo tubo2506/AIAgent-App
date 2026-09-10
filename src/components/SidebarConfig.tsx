@@ -84,7 +84,7 @@ export const SidebarConfig: React.FC<SidebarConfigProps> = ({ config, onChange }
               onChange={(e) => update({ enableSearchGrounding: e.target.checked })}
               className="rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0"
             />
-            <span>🌐 Tra cứu Web (Google Search)</span>
+            <span>🌐 Tra cứu Web ({config.searchProvider === 'google' ? 'Google' : 'Tavily'})</span>
           </label>
 
           {config.model !== 'gemini-flash-lite-latest' && (

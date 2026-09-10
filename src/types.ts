@@ -15,7 +15,24 @@ export interface ApiConfig {
   topP: number;
   topK: number;
   maxOutputTokens: number;
-  enableSearchGrounding?: boolean; // Tra cứu Web thời gian thực qua Google Search
+  enableSearchGrounding?: boolean; // Tra cứu Web thời gian thực
+  searchProvider?: 'tavily' | 'google'; // Nguồn tra cứu: Tavily (miễn phí) hoặc Google Search Grounding
+  tavilyApiKey?: string; // API Key cho Tavily Search (https://tavily.com)
+}
+
+export interface LegalDocument {
+  id: string;
+  title: string;
+  code?: string; // Ví dụ: 123/2020/NĐ-CP hoặc 78/2021/TT-BTC
+  issuedDate?: string;
+  originalFileName: string;
+  originalSize: number; // Kích thước file gốc (bytes)
+  compressedSize: number; // Kích thước text Markdown số hóa (bytes)
+  content: string; // Toàn văn số hóa dạng Markdown
+  summary?: string; // Tóm tắt nội dung chính của văn bản
+  isActive: boolean; // Có đang bật để AI tham chiếu trong chat không
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface GroundingSource {

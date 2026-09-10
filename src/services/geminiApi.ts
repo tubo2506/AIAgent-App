@@ -100,8 +100,8 @@ export function buildPayload(
     payload.generationConfig = generationConfig;
   }
 
-  // Google Search Grounding: Tra cứu Web thời gian thực
-  if (config.enableSearchGrounding) {
+  // Google Search Grounding: Tra cứu Web qua Google (yêu cầu Google Cloud Project có liên kết Billing)
+  if (config.enableSearchGrounding && config.searchProvider === 'google') {
     payload.tools = [
       {
         google_search: {},

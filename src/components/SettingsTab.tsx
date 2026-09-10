@@ -13,9 +13,11 @@ import {
   ExternalLink,
   Lock,
   ShieldAlert,
+  Globe,
 } from './icons';
 import type { ApiConfig, AuthMode, ApiVersion } from '../types';
 import { sendGeminiRequest, buildPayload } from '../services/geminiApi';
+import { testTavilyConnection } from '../services/tavilyApi';
 import {
   setSecurityPin,
   isPinProtectionEnabled,
@@ -87,6 +89,27 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
     message: string;
     latencyMs?: number;
   } | null>(null);
+
+  // Tavily AI Search Test states
+  const [showTavilyKey, setShowTavilyKey] = useState(false);
+  const [isTestingTavily, setIsTestingTavily] = useState(false);
+  const [tavilyTestResult, setTavilyTestResult] = useState<{
+    success: boolean;
+    message: string;
+  } | null>(null);
+
+  const handleTestTavily = async () => {
+    setIsTestingTavily(true);
+    setTavilyTestResult(null);
+    try {
+      const res = await testTavilyConnection(config.tavilyApiKey || '');
+      setTavilyTestResult(res);
+    } catch (err: any) {
+      setTavilyTestResult({ success: false, message: err.message || 'Lỗi kiểm tra kết nối Tavily' });
+    } finally {
+      setIsTestingTavily(false);
+    }
+  };
 
   // System Entry Lock states
   const [systemLockEnabled, setSystemLockEnabledState] = useState<boolean>(isSystemLockEnabled);
@@ -511,28 +534,149 @@ export const SettingsTab: React.FC<SettingsTabProps> = ({
                 </div>
               </label>
 
-              {/* Google Search Grounding Toggle */}
-              <label className="flex items-start gap-3 p-3 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 cursor-pointer hover:border-blue-300 dark:hover:border-slate-750 transition-colors">
-                <input
-                  type="checkbox"
-                  checked={config.enableSearchGrounding ?? true}
-                  onChange={(e) => update({ enableSearchGrounding: e.target.checked })}
-                  className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0"
-                />
-                <div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
-                      Tra Cứu Web Thời Gian Thực (Google Search Grounding)
-                    </span>
-                    <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-600 text-white font-bold">
-                      LIVE
-                    </span>
+              {/* Web Search Grounding Toggle & Provider Config */}
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 space-y-3">
+                <label className="flex items-start gap-3 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={config.enableSearchGrounding ?? false}
+                    onChange={(e) => update({ enableSearchGrounding: e.target.checked })}
+                    className="mt-0.5 rounded border-slate-300 dark:border-slate-700 text-blue-600 focus:ring-0"
+                  />
+                  <div>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                        <Globe className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+                        Tra Cứu Web Thời Gian Thực (Cập nhật Luật & Tin tức Mới Nhất)
+                      </span>
+                      <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-600 text-white font-bold">
+                        LIVE
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
+                      Tự động tra cứu dữ liệu mới nhất trên Internet năm 2024 - 2026 (nghị định mới, hóa đơn điện tử, sự kiện) để AI trả lời chính xác.
+                    </p>
                   </div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">
-                    Cho phép Gemini tự động tìm kiếm trên Google khi bạn hỏi về luật mới, tin tức, nghị định về hóa đơn hoặc sự kiện cập nhật gần đây.
-                  </p>
-                </div>
-              </label>
+                </label>
+
+                {/* Sub-config: Choose Search Provider */}
+                {(config.enableSearchGrounding ?? false) && (
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 space-y-3 pl-6">
+                    <div>
+                      <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block mb-1.5">
+                        Chọn nguồn tra cứu Web:
+                      </span>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                        {/* Option 1: Tavily AI Search */}
+                        <div
+                          onClick={() => update({ searchProvider: 'tavily' })}
+                          className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                            (config.searchProvider || 'tavily') === 'tavily'
+                              ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-1 ring-blue-500'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1">
+                              🌐 Tavily AI Search
+                            </span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-300 font-bold border border-emerald-300 dark:border-emerald-700">
+                              Khuyên dùng (Free)
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                            1.000 lượt miễn phí/tháng, <strong>KHÔNG CẦN THẺ NGÂN HÀNG</strong>. Tối ưu riêng cho AI.
+                          </p>
+                        </div>
+
+                        {/* Option 2: Google Search Grounding */}
+                        <div
+                          onClick={() => update({ searchProvider: 'google' })}
+                          className={`p-2.5 rounded-xl border cursor-pointer transition-all ${
+                            config.searchProvider === 'google'
+                              ? 'bg-blue-50/70 dark:bg-blue-950/40 border-blue-500 ring-1 ring-blue-500'
+                              : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:border-slate-300'
+                          }`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1">
+                              🔍 Google Search
+                            </span>
+                            <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-100 dark:bg-amber-950 text-amber-700 dark:text-amber-300 font-bold border border-amber-300 dark:border-amber-700">
+                              Cần Billing
+                            </span>
+                          </div>
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 leading-normal">
+                            Native Google Grounding. Yêu cầu Google Cloud Project đã liên kết thẻ Visa/Mastercard.
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* If Tavily is selected: Tavily API Key input & test */}
+                    {(config.searchProvider || 'tavily') === 'tavily' && (
+                      <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between">
+                          <label className="text-xs font-bold text-slate-800 dark:text-slate-200 flex items-center gap-1">
+                            <Key className="w-3.5 h-3.5 text-blue-600" />
+                            Tavily API Key (tvly-...)
+                          </label>
+                          <a
+                            href="https://tavily.com"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline flex items-center gap-1 font-semibold"
+                          >
+                            <span>Lấy key miễn phí (30s)</span>
+                            <ExternalLink className="w-3 h-3" />
+                          </a>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <div className="relative flex-1">
+                            <input
+                              type={showTavilyKey ? 'text' : 'password'}
+                              value={config.tavilyApiKey || ''}
+                              onChange={(e) => update({ tavilyApiKey: e.target.value })}
+                              placeholder="tvly-xxxxxxxxxxxxxxxxxxxx"
+                              className="w-full px-3 py-1.5 pr-8 text-xs font-mono rounded-lg border border-slate-300 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowTavilyKey(!showTavilyKey)}
+                              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                            >
+                              {showTavilyKey ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                            </button>
+                          </div>
+
+                          <button
+                            type="button"
+                            disabled={isTestingTavily || !config.tavilyApiKey?.trim()}
+                            onClick={handleTestTavily}
+                            className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold disabled:opacity-50 transition-colors shrink-0 cursor-pointer"
+                          >
+                            {isTestingTavily ? 'Đang thử...' : 'Kiểm tra'}
+                          </button>
+                        </div>
+
+                        {/* Test result message */}
+                        {tavilyTestResult && (
+                          <div
+                            className={`p-2 rounded-lg text-xs font-medium ${
+                              tavilyTestResult.success
+                                ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-200 border border-emerald-200 dark:border-emerald-800'
+                                : 'bg-red-50 dark:bg-red-950/40 text-red-800 dark:text-red-200 border border-red-200 dark:border-red-800'
+                            }`}
+                          >
+                            {tavilyTestResult.message}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
 
