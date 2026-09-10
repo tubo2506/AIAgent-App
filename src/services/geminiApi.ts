@@ -64,10 +64,20 @@ export function buildPayload(
 
   const temporalContext = `[MỐC THỜI GIAN THỰC CỦA HỆ THỐNG]:
 - Hiện tại là: ${timeFormatted}, ${dateFormatted} (Năm ${currentYear}, Quý ${currentQuarter}, Tháng ${currentMonth}).
-- QUY TẮC BẮT BUỘC VỀ THỜI GIAN THỰC:
+- QUY TẮC BẮT BUỘC VỀ THỜI GIAN THỰC & BẢO TOÀN SỰ THẬT PHÁP LÝ:
   1. Khi người dùng hỏi về thời gian ("năm nay năm bao nhiêu", "hôm nay ngày mấy", "năm nay là năm nào", v.v.), bạn PHẢI luôn luôn trả lời chính xác, trực diện theo mốc thời gian thực này (Năm ${currentYear}).
   2. Đối với câu hỏi chào hỏi, hỏi ngày giờ hoặc câu hỏi ngắn gọn: Trả lời ngắn gọn, tự nhiên, đi thẳng vào vấn đề, không trình bày dài dòng hay gượng ép các mẫu báo cáo phức tạp.
-  3. Khi tra cứu hoặc tư vấn pháp luật, chính sách thuế, kế toán: Luôn lấy mốc năm hiện tại là năm ${currentYear} để xác định hiệu lực áp dụng của văn bản.`;
+  3. [QUY TẮC CHỐNG ẢO GIÁC PHÁP LÝ (STRICT ANTI-HALLUCINATION)]:
+     - KHO VĂN BẢN HỢP LỆ TRONG HỆ THỐNG:
+       + Nghị định 123/2020/NĐ-CP & Thông tư 78/2021/TT-BTC (Quy định gốc nền tảng về hóa đơn, chứng từ điện tử; xử lý hóa đơn sai sót theo Điều 19; gửi Mẫu 04/SS-HĐĐT).
+       + Nghị định 125/2020/NĐ-CP & Nghị định 102/2021/NĐ-CP (Xử phạt vi phạm hành chính về thuế, hóa đơn).
+       + Nghị định 41/2022/NĐ-CP (Sửa đổi mẫu thông báo hóa đơn sai sót).
+       + Nghị định 70/2025/NĐ-CP (Sửa đổi, bổ sung 40/61 điều của Nghị định 123/2020/NĐ-CP).
+       + Nghị định 254/2026/NĐ-CP (Quy định chi tiết Luật Quản lý thuế số 108/2025/QH15 về hóa đơn, chứng từ điện tử - tài liệu "NĐ_254_2026_Hoa don" trong Kho tri thức).
+       + Luật Quản lý thuế số 108/2025/QH15 & Luật Quản lý thuế số 38/2019/QH14.
+     - ĐIỀU CẤM TUYỆT ĐỐI:
+       + TUYỆT ĐỐI KHÔNG TỰ BỊA ĐẶT số hiệu Thông tư hoặc Nghị định không có thật (CẤM bịa ra "Thông tư 91/2026/TT-BTC" hoặc bất kỳ thông tư nào không có trong tài liệu). Văn bản hướng dẫn hóa đơn điện tử sai sót vẫn là Thông tư 78/2021/TT-BTC.
+       + Khi người dùng hỏi văn bản mới có sửa đổi bổ sung không: Hãy đối chiếu chính xác với Nghị định 70/2025/NĐ-CP và Nghị định 254/2026/NĐ-CP (NĐ_254_2026_Hoa don) có trong kho tri thức; chỉ rõ điểm mới thực tế (chuẩn hóa dữ liệu qua Cổng TCT, máy tính tiền, sinh trắc học...), đồng thời khẳng định rõ ràng rằng bản chất quy trình xử lý hóa đơn sai sót (hóa đơn điều chỉnh/thay thế, gửi Mẫu 04/SS-HĐĐT) vẫn áp dụng kế thừa theo quy định nền tảng tại Điều 19 Nghị định 123/2020/NĐ-CP và Thông tư 78/2021/TT-BTC.`;
 
   let fullInstruction = (config.systemInstruction || '').trim();
 

@@ -61,7 +61,7 @@ export async function getAllDocuments(): Promise<KnowledgeDocument[]> {
 
     request.onsuccess = async () => {
       let rawDocs = request.result || [];
-      const SEED_VERSION_KEY = 'gemini_knowledge_seed_v2_vietnamese';
+      const SEED_VERSION_KEY = 'gemini_knowledge_seed_v3_antihallucination';
       const needsUpgrade = typeof window !== 'undefined' && !localStorage.getItem(SEED_VERSION_KEY);
 
       // Nếu kho trên máy người dùng còn trống hoặc cần nâng cấp bản tiếng Việt chuẩn
@@ -346,14 +346,39 @@ export function chunkDocumentByArticles(doc: KnowledgeDocument): ArticleChunk[] 
 function extractLegalQueryKeywords(query: string): string[] {
   const normalized = query.toLowerCase();
 
-  // 1. Nhận diện số hiệu nghị định/luật (123, 70, 125, 254, 15, 41, 108, 38)
-  const decreeMatches = normalized.match(/\b(123|70|125|254|15|41|108|38)\b/g) || [];
+  // 1. Nhận diện số hiệu nghị định/luật (123, 70, 125, 254, 15, 41, 108, 38, 78)
+  const decreeMatches = normalized.match(/\b(123|70|125|254|15|41|108|38|78)\b/g) || [];
 
   // 2. Nhận diện điều khoản cụ thể (điều 9, điều 19, điều 4, khoản 1...)
   const articleMatches = normalized.match(/điều\s+\d+[a-z]?/g) || [];
 
   // 3. Cụm từ chuyên môn pháp lý & nghiệp vụ hóa đơn - thuế
   const legalPhrases = [
+    '254_2026',
+    '254/2026',
+    'nghị định 254',
+    'nđ 254',
+    'hóa đơn 254',
+    '70/2025',
+    'nghị định 70',
+    'nđ 70',
+    '123/2020',
+    'nghị định 123',
+    'nđ 123',
+    'thông tư 78',
+    'tt 78',
+    '78/2021',
+    'nghị định mới',
+    'văn bản mới',
+    'quy định mới',
+    'sửa đổi',
+    'bổ sung',
+    'mới đây',
+    'hiện nay',
+    'mới nhất',
+    'mẫu 04',
+    '04/ss',
+    '04/ss-hđđt',
     'thời điểm',
     'lập hóa đơn',
     'xuất hóa đơn',
@@ -452,8 +477,8 @@ export function buildLegalContextPrompt(activeDocs: KnowledgeDocument[], userQue
     if (queryLower.includes('thời điểm') && titleLower.includes('thời điểm')) {
       score += 60;
     }
-    if ((queryLower.includes('sai sót') || queryLower.includes('hủy') || queryLower.includes('điều chỉnh')) && 
-        (titleLower.includes('sai sót') || titleLower.includes('xử lý hóa đơn'))) {
+    if ((queryLower.includes('sai sót') || queryLower.includes('hủy') || queryLower.includes('điều chỉnh') || queryLower.includes('thay thế')) && 
+        (titleLower.includes('sai sót') || titleLower.includes('xử lý hóa đơn') || titleLower.includes('điều chỉnh'))) {
       score += 60;
     }
     if (queryLower.includes('máy tính tiền') && titleLower.includes('máy tính tiền')) {
@@ -462,6 +487,22 @@ export function buildLegalContextPrompt(activeDocs: KnowledgeDocument[], userQue
     if ((queryLower.includes('giảm thuế') || queryLower.includes('8%')) && 
         (titleLower.includes('giảm thuế') || titleLower.includes('thuế suất'))) {
       score += 60;
+    }
+
+    // Boost đặc biệt khi người dùng hỏi về "nghị định mới", "2026", "254", "sửa đổi", "bổ sung"
+    const isAskingNewRegulations = 
+      queryLower.includes('nghị định mới') ||
+      queryLower.includes('văn bản mới') ||
+      queryLower.includes('mới đây') ||
+      queryLower.includes('mới nhất') ||
+      queryLower.includes('sửa đổi') ||
+      queryLower.includes('bổ sung') ||
+      queryLower.includes('254') ||
+      queryLower.includes('2026') ||
+      queryLower.includes('70');
+
+    if (isAskingNewRegulations && (codeLower.includes('254') || codeLower.includes('70') || titleLower.includes('254') || titleLower.includes('70'))) {
+      score += 55;
     }
 
     // Điểm xuất hiện trong nội dung (Body matching)
@@ -514,12 +555,24 @@ export function buildLegalContextPrompt(activeDocs: KnowledgeDocument[], userQue
   });
 
   // Kèm thông tin tóm tắt của các văn bản đang kích hoạt
-  context += `MỤC LỤC & TÓM TẮT CÁC NGHỊ ĐỊNH ĐANG THAM CHIẾU:\n`;
+  context += `MỤC LỤC & TÓM TẮT CÁC NGHỊ ĐỊNH TRONG KHO TRI THỨC:\n`;
   activeDocs.forEach((d) => {
     context += `- ${d.title} (${d.code || ''}): ${d.summary || 'Đang kích hoạt'}\n`;
   });
 
-  context += `\nYÊU CẦU ĐỐI VỚI AI: Hãy căn cứ chính xác vào các Điều, Khoản, Điểm được trích xuất ở trên để giải đáp thắc mắc của người dùng. Trích dẫn rõ ràng tên văn bản pháp luật và vị trí điều khoản quy định.\n`;
+  context += `\n[QUY TẮC BẢO TOÀN SỰ THẬT & CHỐNG ẢO GIÁC PHÁP LÝ (BẮT BUỘC)]:
+1. CÁC NGUỒN CĂN CỨ HỢP LỆ ĐÃ ĐƯỢC XÁC THỰC:
+   - Nghị định 123/2020/NĐ-CP & Thông tư 78/2021/TT-BTC (Nền tảng về hóa đơn, chứng từ điện tử; xử lý hóa đơn sai sót theo Điều 19; Mẫu 04/SS-HĐĐT).
+   - Nghị định 125/2020/NĐ-CP & Nghị định 102/2021/NĐ-CP (Xử phạt vi phạm hành chính).
+   - Nghị định 41/2022/NĐ-CP (Sửa đổi mẫu thông báo sai sót).
+   - Nghị định 70/2025/NĐ-CP (Sửa đổi, bổ sung 40/61 điều NĐ 123).
+   - Nghị định 254/2026/NĐ-CP (Quy định chi tiết Luật Quản lý thuế 108/2025/QH15 về hóa đơn, chứng từ điện tử - tài liệu "NĐ_254_2026_Hoa don" trong Kho tri thức).
+   - Luật Quản lý thuế số 108/2025/QH15 & Luật Quản lý thuế số 38/2019/QH14.
+2. ĐIỀU CẤM KỴ TUYỆT ĐỐI:
+   - TUYỆT ĐỐI CẤM TỰ BỊA ĐẶT số hiệu Thông tư nào khác (ví dụ: "Thông tư 91/2026/TT-BTC" HOÀN TOÀN KHÔNG TỒN TẠI, CẤM TRÍCH DẪN). Hướng dẫn về xử lý hóa đơn sai sót vẫn là Thông tư 78/2021/TT-BTC.
+   - Khi đối chiếu văn bản mới: Nếu người dùng hỏi các Nghị định mới (Nghị định 70/2025/NĐ-CP, Nghị định 254/2026/NĐ-CP) có sửa đổi quy trình xử lý hóa đơn sai sót hay không, hãy trả lời chính xác:
+     + Bản chất quy trình kỹ thuật (quyền chọn Hóa đơn điều chỉnh hay Thay thế, gửi Mẫu 04/SS-HĐĐT) vẫn kế thừa thống nhất theo Điều 19 Nghị định 123/2020/NĐ-CP và Thông tư 78/2021/TT-BTC.
+     + Các điểm mới trong Nghị định 70/2025 và Nghị định 254/2026 (NĐ_254_2026_Hoa don) tập trung vào chuẩn hóa tự động hóa qua Cổng thông tin điện tử Tổng cục Thuế, kết nối hóa đơn máy tính tiền, xác thực sinh trắc học và kiểm soát dữ liệu điện tử.`;
 
   return context;
 }
