@@ -30,9 +30,9 @@ const DEFAULT_CONFIG: ApiConfig = {
   topP: 0.95,
   topK: 40,
   maxOutputTokens: 8192, // Tăng lên 8192 để các model suy luận (thinking) không bị ngắt giữa chừng
-  enableSearchGrounding: false, // Mặc định TẮT (bật khi muốn tra cứu web thời gian thực)
+  enableSearchGrounding: true, // Tự động bật sẵn Tra cứu Web thời gian thực
   searchProvider: 'tavily', // Mặc định dùng Tavily Search (1.000 lượt miễn phí, không cần thẻ ngân hàng)
-  tavilyApiKey: '',
+  tavilyApiKey: (import.meta as any).env?.VITE_TAVILY_API_KEY || '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',
 };
 
 const STORAGE_CONFIG_KEY = 'gemini_studio_config_v2';
@@ -97,6 +97,10 @@ export function App() {
         // Tự động nâng cấp maxOutputTokens nếu còn ở mức cũ <= 2048 để tránh dừng đột ngột
         if (!parsed.maxOutputTokens || parsed.maxOutputTokens <= 2048) {
           parsed.maxOutputTokens = 8192;
+        }
+        // Tự động cập nhật Tavily API Key nếu chưa có
+        if (!parsed.tavilyApiKey) {
+          parsed.tavilyApiKey = DEFAULT_CONFIG.tavilyApiKey;
         }
         return { ...DEFAULT_CONFIG, ...parsed };
       }
