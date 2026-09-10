@@ -61,18 +61,29 @@ export async function getAllDocuments(): Promise<KnowledgeDocument[]> {
 
     request.onsuccess = async () => {
       let rawDocs = request.result || [];
+      const SEED_VERSION_KEY = 'gemini_knowledge_seed_v2_vietnamese';
+      const needsUpgrade = typeof window !== 'undefined' && !localStorage.getItem(SEED_VERSION_KEY);
 
-      // Nếu kho trên máy người dùng còn trống, tự động nạp 5 văn bản luật nền tảng
-      if (rawDocs.length === 0 && DEFAULT_LEGAL_KNOWLEDGE && DEFAULT_LEGAL_KNOWLEDGE.length > 0) {
+      // Nếu kho trên máy người dùng còn trống hoặc cần nâng cấp bản tiếng Việt chuẩn
+      if (rawDocs.length === 0 || needsUpgrade) {
         try {
           const writeTx = db.transaction(STORE_NAME, 'readwrite');
           const writeStore = writeTx.objectStore(STORE_NAME);
           for (const doc of DEFAULT_LEGAL_KNOWLEDGE) {
             writeStore.put(normalizeDocument(doc));
           }
-          rawDocs = [...DEFAULT_LEGAL_KNOWLEDGE];
+          if (typeof window !== 'undefined') {
+            localStorage.setItem(SEED_VERSION_KEY, 'done');
+          }
+          const reloadReq = writeStore.getAll();
+          reloadReq.onsuccess = () => {
+            const docs: KnowledgeDocument[] = (reloadReq.result || DEFAULT_LEGAL_KNOWLEDGE).map(normalizeDocument);
+            docs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            resolve(docs);
+          };
+          return;
         } catch (seedErr) {
-          console.warn('Không thể tự động nạp tri thức mẫu vào IndexedDB:', seedErr);
+          console.warn('Không thể tự động nạp/nâng cấp tri thức mẫu vào IndexedDB:', seedErr);
           rawDocs = [...DEFAULT_LEGAL_KNOWLEDGE];
         }
       }
