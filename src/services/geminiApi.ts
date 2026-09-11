@@ -206,13 +206,22 @@ export async function sendGeminiRequest(
         response.status === 400 &&
         (rawErrorMsg.toLowerCase().includes('location') ||
           rawErrorMsg.toLowerCase().includes('country') ||
-          data?.error?.status === 'FAILED_PRECONDITION');
+          (data?.error?.status === 'FAILED_PRECONDITION' &&
+            (rawErrorMsg.toLowerCase().includes('user') ||
+              rawErrorMsg.toLowerCase().includes('support') ||
+              rawErrorMsg.toLowerCase().includes('billing') ||
+              !rawErrorMsg)));
 
       if (response.status === 404) {
         friendlyError = `Model "${config.model}" không tìm thấy trên phiên bản ${config.apiVersion}. Hãy thử đổi sang "gemini-3.5-flash-lite" hoặc "gemini-flash-lite-latest".`;
       } else if (isLocationError) {
         friendlyError =
-          'Vị trí mạng/IP hiện tại bị Google giới hạn (User location is not supported). 💡 Cách khắc phục ngay:\n1. TẮT VPN (nếu đang bật VPN công ty hoặc VPN nước ngoài) để kết nối trực tiếp từ mạng Việt Nam.\n2. Hoặc phát mạng 4G/5G từ điện thoại di động (giải quyết 100% khi dải IP Wi-Fi bị Google xếp nhầm).\n3. Đảm bảo chọn model "Gemini 3.5 Flash-Lite" trên thanh cấu hình.';
+          'Vị trí mạng/IP hiện tại bị Google giới hạn (User location is not supported).\n\n' +
+          '🔍 **Nguyên nhân chính xác:** Máy tính này đang kết nối qua phần mềm bảo mật/Proxy doanh nghiệp (như Zscaler Client Connector điều hướng mạng qua Singapore). Google AI Studio (gói miễn phí) tự động chặn IP trung tâm dữ liệu này. Trong khi đó, các thiết bị khác (điện thoại, máy cá nhân) dùng mạng gia đình/4G Việt Nam trực tiếp nên không bị chặn.\n\n' +
+          '💡 **Cách khắc phục ngay:**\n' +
+          '1. Nhấp đúp vào file **"Chay-App-Bypass-VPN.bat"** đã tạo sẵn trên màn hình Desktop của bạn (mở Chrome trực tiếp bỏ qua Zscaler).\n' +
+          '2. Hoặc tạm **Pause/Turn Off Zscaler Internet Security** ở khay hệ thống (góc dưới bên phải gần đồng hồ).\n' +
+          '3. Hoặc phát mạng 4G/5G từ điện thoại di động.';
       } else if (response.status === 401 || response.status === 403) {
         friendlyError = 'API Key không hợp lệ hoặc không có quyền truy cập endpoint này. Bạn hãy kiểm tra lại khóa API trong phần Cài đặt.';
       } else if (response.status === 504 || response.status === 502) {
@@ -324,13 +333,22 @@ export async function sendGeminiStreamingRequest(
         response.status === 400 &&
         (rawErrorMsg.toLowerCase().includes('location') ||
           rawErrorMsg.toLowerCase().includes('country') ||
-          data?.error?.status === 'FAILED_PRECONDITION');
+          (data?.error?.status === 'FAILED_PRECONDITION' &&
+            (rawErrorMsg.toLowerCase().includes('user') ||
+              rawErrorMsg.toLowerCase().includes('support') ||
+              rawErrorMsg.toLowerCase().includes('billing') ||
+              !rawErrorMsg)));
 
       if (response.status === 404) {
         friendlyError = `Model "${config.model}" không tìm thấy trên phiên bản ${config.apiVersion}. Hãy thử đổi sang "gemini-3.5-flash-lite" hoặc "gemini-flash-lite-latest".`;
       } else if (isLocationError) {
         friendlyError =
-          'Vị trí mạng/IP hiện tại bị Google giới hạn (User location is not supported). 💡 Cách khắc phục ngay:\n1. TẮT VPN (nếu đang bật VPN công ty hoặc VPN nước ngoài) để kết nối trực tiếp từ mạng Việt Nam.\n2. Hoặc phát mạng 4G/5G từ điện thoại di động (giải quyết 100% khi dải IP Wi-Fi bị Google xếp nhầm).\n3. Đảm bảo chọn model "Gemini 3.5 Flash-Lite" trên thanh cấu hình.';
+          'Vị trí mạng/IP hiện tại bị Google giới hạn (User location is not supported).\n\n' +
+          '🔍 **Nguyên nhân chính xác:** Máy tính này đang kết nối qua phần mềm bảo mật/Proxy doanh nghiệp (như Zscaler Client Connector điều hướng mạng qua Singapore). Google AI Studio (gói miễn phí) tự động chặn IP trung tâm dữ liệu này. Trong khi đó, các thiết bị khác (điện thoại, máy cá nhân) dùng mạng gia đình/4G Việt Nam trực tiếp nên không bị chặn.\n\n' +
+          '💡 **Cách khắc phục ngay:**\n' +
+          '1. Nhấp đúp vào file **"Chay-App-Bypass-VPN.bat"** đã tạo sẵn trên màn hình Desktop của bạn (mở Chrome trực tiếp bỏ qua Zscaler).\n' +
+          '2. Hoặc tạm **Pause/Turn Off Zscaler Internet Security** ở khay hệ thống (góc dưới bên phải gần đồng hồ).\n' +
+          '3. Hoặc phát mạng 4G/5G từ điện thoại di động.';
       } else if (response.status === 401 || response.status === 403) {
         friendlyError = 'API Key không hợp lệ hoặc không có quyền truy cập endpoint này. Bạn hãy kiểm tra lại khóa API trong phần Cài đặt.';
       } else if (response.status === 504 || response.status === 502) {

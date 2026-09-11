@@ -2061,6 +2061,53 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                         {isStreamingNow && (
                           <span className="inline-block w-2 h-4 ml-1 bg-blue-600 animate-pulse align-middle" />
                         )}
+                        {/* Interactive Corporate Proxy / Location Error Bypass Widget */}
+                        {isError && (m.content.includes('User location is not supported') || m.content.includes('Vị trí mạng/IP')) && (
+                          <div className="mt-3 pt-3 border-t border-rose-200 dark:border-rose-900/60 space-y-2.5 not-prose">
+                            <div className="p-3 rounded-xl bg-white dark:bg-slate-900 border border-rose-300 dark:border-rose-800 shadow-xs space-y-2">
+                              <div className="flex items-center gap-2 text-xs font-bold text-rose-800 dark:text-rose-300">
+                                <span className="text-base">🏢</span>
+                                <span>Phát hiện mạng Zscaler / VPN công ty đang chặn Google AI</span>
+                              </div>
+                              <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed">
+                                Máy tính này đang kết nối qua phần mềm bảo mật (Zscaler / VPN) điều hướng IP qua máy chủ nước ngoài (Singapore). Google AI Studio (gói miễn phí) tự động chặn IP trung tâm dữ liệu này. Trong khi đó, điện thoại hoặc máy cá nhân dùng mạng gia đình/4G Việt Nam nên không bị chặn.
+                              </p>
+                              <div className="flex flex-wrap items-center gap-2 pt-1">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cmd = 'start "" "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe" --no-proxy-server "https://ai-agent-25f66.web.app"';
+                                    navigator.clipboard.writeText(cmd);
+                                    setFeedbackToast('📋 Đã copy lệnh mở Chrome Direct (bỏ qua Zscaler)!');
+                                    setTimeout(() => setFeedbackToast(null), 3500);
+                                  }}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white shadow-xs transition-all cursor-pointer"
+                                >
+                                  <Copy className="w-3.5 h-3.5" />
+                                  <span>Copy lệnh mở Chrome Direct</span>
+                                </button>
+
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const lastUser = [...messages].reverse().find((msg) => msg.role === 'user');
+                                    if (lastUser?.content) {
+                                      handleSend(lastUser.content);
+                                    }
+                                  }}
+                                  disabled={isLoading}
+                                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-300 dark:border-slate-700 transition-all cursor-pointer"
+                                >
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                  <span>Thử gửi lại</span>
+                                </button>
+                              </div>
+                              <div className="text-[10px] text-slate-600 dark:text-slate-400 bg-slate-50 dark:bg-slate-950 p-2 rounded-lg font-mono border border-slate-200 dark:border-slate-800">
+                                💡 <b>Khắc phục ngay:</b> Trên màn hình Desktop máy tính này đã có sẵn file <b>Chay-App-Bypass-VPN.bat</b>. Nhấp đúp để mở trực tiếp!
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
 
