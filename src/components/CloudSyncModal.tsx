@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { type User } from 'firebase/auth';
-import { X, Cloud, RefreshCw, Check, LogOut, Sparkles, AlertCircle } from './icons';
+import { X, Cloud, RefreshCw, Check, LogOut, Sparkles, AlertCircle, ExternalLink } from './icons';
 import { signInWithGoogle, logoutUser } from '../services/cloudSyncService';
 
 export interface CloudSyncModalProps {
@@ -240,12 +240,26 @@ export const CloudSyncModal: React.FC<CloudSyncModalProps> = ({
           </button>
 
           {/* Security & Infrastructure Note */}
-          <div className="p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed">
-            <p className="flex items-center gap-1 font-semibold text-blue-700 dark:text-blue-300 mb-1">
+          <div className="p-3 rounded-xl bg-blue-50/50 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-[11px] text-slate-600 dark:text-slate-400 leading-relaxed space-y-2">
+            <p className="flex items-center gap-1 font-semibold text-blue-700 dark:text-blue-300">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
               <span>Bảo Mật Google Cloud & Chi Phí 0đ:</span>
             </p>
-            Dữ liệu được lưu trữ trực tiếp trên cụm máy chủ **Google Cloud Firestore (Khu vực Singapore - asia-southeast1)**. Hệ thống tận dụng gói miễn phí vĩnh viễn (50.000 lượt đọc/ngày) đảm bảo tốc độ cao nhất và bảo mật riêng tư tuyệt đối.
+            <p>
+              Dữ liệu được lưu trữ trên cụm máy chủ <b>Google Cloud Firestore (Singapore)</b>. Hệ thống tận dụng gói miễn phí vĩnh viễn (50.000 lượt đọc/ngày) đảm bảo tốc độ và bảo mật tuyệt đối.
+            </p>
+            <div className="pt-1 flex items-center justify-between border-t border-blue-200/50 dark:border-blue-900/40">
+              <span className="text-[10px] text-slate-500 dark:text-slate-400">Xem thống kê lượt dùng:</span>
+              <a
+                href="https://console.firebase.google.com/project/ai-agent-25f66/overview"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 hover:text-blue-700 dark:text-blue-400 hover:underline"
+              >
+                <span>Firebase Console Dashboard</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
           </div>
         </div>
       </div>
