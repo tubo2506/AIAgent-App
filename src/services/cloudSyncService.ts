@@ -5,6 +5,8 @@ import {
   onAuthStateChanged,
   type User,
 } from 'firebase/auth';
+
+export type { User };
 import {
   doc,
   setDoc,

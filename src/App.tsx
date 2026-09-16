@@ -11,12 +11,15 @@ import { AdminMonitorTab } from './components/AdminMonitorTab';
 import { PinLockModal } from './components/PinLockModal';
 import { SystemLockScreen } from './components/SystemLockScreen';
 import { getOrCreateGuestProfile } from './services/guestAnalyticsService';
+import { onAuthChange, getCurrentUser, type User } from './services/cloudSyncService';
 import {
   isPinProtectionEnabled,
   isSystemAuthenticated,
   isSystemLockEnabled,
   setSystemAuthenticated,
 } from './services/security';
+
+const ADMIN_EMAIL = 'ledinhtu892@gmail.com';
 
 const DEFAULT_CONFIG: ApiConfig = {
   apiKey: (import.meta as any).env?.VITE_GEMINI_API_KEY || '',
@@ -165,6 +168,21 @@ export function App() {
     } catch {}
   }, []);
 
+  // Firebase Auth State - Xác định quyền Admin cho tài khoản ledinhtu892@gmail.com
+  const [currentUser, setCurrentUser] = useState<User | null>(() => getCurrentUser());
+
+  useEffect(() => {
+    const unsubscribe = onAuthChange((user) => {
+      setCurrentUser(user);
+      if (user?.email !== ADMIN_EMAIL) {
+        setActiveTab((prev) => (prev === 'monitor' ? 'chat' : prev));
+      }
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const isAdmin = currentUser?.email === ADMIN_EMAIL;
+
   // Master System Entry Lock State
   const [isSystemUnlocked, setIsSystemUnlocked] = useState<boolean>(() => {
     return !isSystemLockEnabled() || isSystemAuthenticated();
@@ -203,6 +221,11 @@ export function App() {
   };
 
   const handleTabClick = (tabKey: typeof activeTab) => {
+    // Bảo mật: Chỉ cho phép tài khoản Admin truy cập tab Giám sát
+    if (tabKey === 'monitor' && !isAdmin) {
+      setActiveTab('chat');
+      return;
+    }
     if (tabKey === 'chat' || tabKey === 'presets') {
       setActiveTab(tabKey);
       return;
@@ -364,6 +387,7 @@ export function App() {
           setPendingAction(null);
           setIsPinModalOpen(true);
         }}
+        isAdmin={isAdmin}
       />
 
       {/* Main Full-Width Content Area */}
@@ -427,9 +451,12 @@ export function App() {
           />
         </div>
 
-        <div className={activeTab === 'monitor' ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : 'hidden'}>
-          <AdminMonitorTab onLockAdmin={handleLockNow} />
-        </div>
+        {/* Tab Giám sát: Chỉ render khi đăng nhập đúng tài khoản Admin ledinhtu892@gmail.com */}
+        {isAdmin && (
+          <div className={activeTab === 'monitor' ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : 'hidden'}>
+            <AdminMonitorTab onLockAdmin={handleLockNow} />
+          </div>
+        )}
       </div>
 
       {/* Security PIN Lock Modal */}
