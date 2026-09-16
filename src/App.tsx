@@ -7,8 +7,10 @@ import { PresetsTab } from './components/PresetsTab';
 import { HistoryTab } from './components/HistoryTab';
 import { BenchmarkTab } from './components/BenchmarkTab';
 import { SettingsTab } from './components/SettingsTab';
+import { AdminMonitorTab } from './components/AdminMonitorTab';
 import { PinLockModal } from './components/PinLockModal';
 import { SystemLockScreen } from './components/SystemLockScreen';
+import { getOrCreateGuestProfile } from './services/guestAnalyticsService';
 import {
   isPinProtectionEnabled,
   isSystemAuthenticated,
@@ -151,10 +153,17 @@ export function App() {
     return [];
   });
 
-  const [activeTab, setActiveTab] = useState<'chat' | 'benchmark' | 'presets' | 'raw' | 'history' | 'settings'>('chat');
+  const [activeTab, setActiveTab] = useState<'chat' | 'benchmark' | 'presets' | 'raw' | 'history' | 'settings' | 'monitor'>('chat');
   const [lastLatency, setLastLatency] = useState<number | undefined>();
   const [lastStatus, setLastStatus] = useState<number | undefined>();
   const [pendingPrompt, setPendingPrompt] = useState<string>('');
+
+  // Tự động nhận diện hồ sơ thiết bị khách (Guest Device Fingerprint)
+  useEffect(() => {
+    try {
+      getOrCreateGuestProfile();
+    } catch {}
+  }, []);
 
   // Master System Entry Lock State
   const [isSystemUnlocked, setIsSystemUnlocked] = useState<boolean>(() => {
@@ -173,7 +182,7 @@ export function App() {
   // Security PIN Lock State
   const [isUnlocked, setIsUnlocked] = useState<boolean>(false);
   const [isPinModalOpen, setIsPinModalOpen] = useState<boolean>(false);
-  const [pendingTab, setPendingTab] = useState<'chat' | 'benchmark' | 'presets' | 'raw' | 'history' | 'settings' | null>(null);
+  const [pendingTab, setPendingTab] = useState<'chat' | 'benchmark' | 'presets' | 'raw' | 'history' | 'settings' | 'monitor' | null>(null);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   const isProtected = isPinProtectionEnabled();
@@ -416,6 +425,10 @@ export function App() {
             onLockNow={handleLockNow}
             onLockSystem={handleLockSystem}
           />
+        </div>
+
+        <div className={activeTab === 'monitor' ? 'flex-1 min-h-0 flex flex-col overflow-hidden' : 'hidden'}>
+          <AdminMonitorTab onLockAdmin={handleLockNow} />
         </div>
       </div>
 

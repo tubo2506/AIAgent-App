@@ -66,6 +66,7 @@ import { getKnowledgeForAgent, buildLegalContextPrompt, saveDocument } from '../
 import { saveGoldenExample, formatGoldenExamplesPrompt, getGoldenExamples } from '../services/feedbackStorage';
 import { searchTavily } from '../services/tavilyApi';
 import { detectBestAgent } from '../services/agentRouter';
+import { trackMessageTelemetry } from '../services/guestAnalyticsService';
 import {
   onAuthChange,
   signInAnonymouslyUser,
@@ -1487,6 +1488,21 @@ export const ChatTab: React.FC<ChatTabProps> = ({
               };
             })
           );
+
+          // Ghi nhận telemetry ẩn danh phục vụ giám sát quản trị
+          try {
+            trackMessageTelemetry({
+              query: text,
+              agentId: activeAgent.id,
+              agentName: activeAgent.name,
+              tokensUsed: tokens?.totalTokens || 0,
+              latencyMs: response.latencyMs,
+              hasAttachments: attachments.length > 0,
+              status: 'success',
+              userEmail: currentUser?.email || undefined,
+              userDisplayName: currentUser?.displayName || undefined,
+            });
+          } catch {}
         } else {
           updateCurrentMessages((prev) =>
             prev.map((msg) =>
@@ -1598,6 +1614,21 @@ export const ChatTab: React.FC<ChatTabProps> = ({
                 : msg
             )
           );
+
+          // Ghi nhận telemetry ẩn danh phục vụ giám sát quản trị
+          try {
+            trackMessageTelemetry({
+              query: text,
+              agentId: activeAgent.id,
+              agentName: activeAgent.name,
+              tokensUsed: tokens?.totalTokens || 0,
+              latencyMs: response.latencyMs,
+              hasAttachments: attachments.length > 0,
+              status: 'success',
+              userEmail: currentUser?.email || undefined,
+              userDisplayName: currentUser?.displayName || undefined,
+            });
+          } catch {}
         } else {
           updateCurrentMessages((prev) =>
             prev.map((msg) =>
